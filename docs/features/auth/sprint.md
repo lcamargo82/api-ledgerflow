@@ -23,6 +23,8 @@ Entregar os fluxos essenciais para que o aplicativo mobile consiga cadastrar usu
 - [ ] Configurar a geração do token JWT consumindo secret unicamente pelo `.env` usando `ConfigModule`.
 - [ ] Criar o endpoint `POST /auth/login`.
 - [ ] Criar `JwtAuthGuard` para proteger as futuras rotas privadas e decorar endpoints conforme necessidade.
+- [ ] Criar refresh token persistido somente em hash, com expiração configurável por `JWT_REFRESH_EXPIRES_IN`.
+- [ ] Criar endpoint `POST /auth/refresh` com rotação do refresh token a cada uso.
 
 ### [ ] Tarefa 4: Implementar Edição de Perfil
 - [ ] Criar rota privada `PUT /users/profile` ou `PATCH /users/profile`.
@@ -30,14 +32,18 @@ Entregar os fluxos essenciais para que o aplicativo mobile consiga cadastrar usu
 - [ ] Implementar regra de negócio: Se o usuário deseja alterar a senha, validar a senha atual obrigatória.
 - [ ] Checar unicidade de novo e-mail (caso alterado).
 
-### [ ] Tarefa 5: Esqueci a Senha e Logout
+### [ ] Tarefa 5: Esqueci a Senha, Reset de Senha e Logout
 - [ ] Criar endpoint `POST /auth/forgot-password` e DTO `ForgotPasswordDto`.
-- [ ] Gerar hash temporário seguro e ligar ao banco de dados ou estrutura Redis temporária, evitando vazar tokens na resposta HTTP.
-- [ ] Simular o envio de link por e-mail nos logs, sem expor informações sigilosas.
-- [ ] Estruturar a estratégia de revogação/esquecimento do token para o Sign Out.
+- [ ] Criar endpoint `POST /auth/reset-password` e DTO `ResetPasswordDto`.
+- [ ] Gerar token temporário seguro, persistindo somente seu hash no banco.
+- [ ] Enviar link por e-mail quando SMTP estiver configurado, sem expor o token em resposta HTTP.
+- [ ] Marcar o token de recuperação como utilizado após sucesso para impedir reuso.
+- [ ] Estruturar a estratégia de revogação por `tokenVersion` para o Sign Out e reset de senha.
+- [ ] Revogar refresh tokens ativos no Sign Out e reset de senha.
 
 ## Critérios de Aceite (Definition of Done)
 - [ ] Funcionalidades (Cadastro, Login, Edição e Forgot Password) respondem corretamente no formato JSON.
 - [ ] Tratamento de erros centralizado captura e formata falhas, mascarando erros internos do sistema (500) do client side.
 - [ ] Código modularizado seguindo Repository Pattern (casos de uso não dependem de bibliotecas do banco de dados).
 - [ ] Nenhuma chave JWT, senha (plain text) ou variável de ambiente está visível nos commits ou respostas da API.
+- [ ] OpenAPI/Swagger expõe contratos suficientes para testes via Apidog ou documentação equivalente.

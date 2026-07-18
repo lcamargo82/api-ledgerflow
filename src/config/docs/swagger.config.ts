@@ -21,5 +21,6 @@ export function getSwaggerConfig(config: ConfigService) {
     .addTag('App')
     .addTag('Auth')
     .addTag('Health')
+    .addTag('Users')
     .build();
 }
