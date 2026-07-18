@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmailModule } from './modules/email/email.module';
 import { HealthModule } from './modules/health/health.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { HealthModule } from './modules/health/health.module';
     HealthModule,
     AuthModule,
     EmailModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [

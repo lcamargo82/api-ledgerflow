@@ -21,23 +21,41 @@ Este documento detalha os requisitos técnicos e as regras de negócio para a im
 - **Inputs:** `email`, `password`.
 - **Regras:**
   - Validar a existência do usuário e se o hash da senha confere.
-  - Em caso de sucesso, retornar um token JWT seguro.
+  - Em caso de sucesso, retornar um `accessToken` JWT seguro e um `refreshToken` criptográfico.
+  - Persistir somente o hash do `refreshToken` no banco.
   - Retornar as informações básicas do perfil do usuário para o app.
   - **Segurança:** Retornar mensagem genérica para falha ("E-mail ou senha incorretos"), prevenindo enumeração de usuários.
 
-### 3. Sign Out (Logout)
+### 3. Refresh Token
+- **Inputs:** `refreshToken`.
+- **Regras:**
+  - Validar se o refresh token existe, não expirou e não foi revogado.
+  - Comparar usando hash do token recebido, pois o token puro não deve ser persistido.
+  - Usar rotação: a cada refresh bem-sucedido, revogar o refresh token anterior e emitir um novo par `accessToken` + `refreshToken`.
+  - Retornar erro genérico `401` para refresh token inválido, expirado ou reutilizado.
+
+### 4. Sign Out (Logout)
 - **Regras:**
   - O app mobile deve apagar o token localmente.
-  - Na API, invalidação do token atual (se for implementada uma abordagem de blacklist) ou gerenciamento de sessão baseada em banco.
+  - Na API, a estratégia adotada no MVP será revogação por `tokenVersion` no usuário e revogação dos refresh tokens ativos. Ao fazer logout, tokens emitidos anteriormente deixam de validar.
 
-### 4. Esqueci a Senha (Forgot Password)
+### 5. Esqueci a Senha (Forgot Password)
 - **Inputs:** `email`.
 - **Regras:**
   - Gerar um token de recuperação criptográfico seguro e de curta duração.
-  - Simular o envio de e-mail com instruções (a integração real ocorrerá futuramente, mas a arquitetura deve estar pronta).
+  - Persistir somente o hash do token de recuperação no banco, nunca o token puro.
+  - Enviar e-mail com instruções quando SMTP estiver configurado. Em ambiente local, Mailpit/serviço equivalente pode ser usado para validar a mensagem.
   - Mensagem de sucesso sempre será enviada em formato padrão, mesmo que o e-mail não exista, evitando vazamento de base de usuários.
 
-### 5. Edição de Perfil
+### 6. Redefinição de Senha (Reset Password)
+- **Inputs:** `token`, `password`, `passwordConfirmation`.
+- **Regras:**
+  - Validar se o token existe, não expirou e ainda não foi utilizado.
+  - Comparar usando hash do token recebido, pois o token puro não deve ser persistido.
+  - Invalidar tokens JWT anteriores e refresh tokens ativos do usuário após redefinir a senha.
+  - Marcar o token de recuperação como utilizado para impedir reuso.
+
+### 7. Edição de Perfil
 - **Campos Editáveis:** `name`, `email`, `password`.
 - **Regras:**
   - **Requisito:** Rota autenticada (JwtAuthGuard). O ID do usuário a ser alterado vem obrigatoriamente do payload do Token e não do payload da requisição.
@@ -49,3 +67,14 @@ Este documento detalha os requisitos técnicos e as regras de negócio para a im
 - **DTOs**: Validam regras de payload usando validações (ex: `class-validator`).
 - **Use Cases/Services**: Contêm puramente as regras de negócio de autenticação e validações complexas.
 - **Repositories**: Interface `IUsersRepository` deverá ser implementada para persistência e recuperação de usuários, garantindo o desacoplamento do ORM.
+
+## Endpoints MVP
+- `POST /auth/signup`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+- `GET /auth/me`
+- `GET /users/profile`
+- `PATCH /users/profile`
