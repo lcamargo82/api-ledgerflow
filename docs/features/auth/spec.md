@@ -1,0 +1,51 @@
+# Especificação Técnica (Spec) - Autenticação e Perfil
+
+## Visão Geral
+Este documento detalha os requisitos técnicos e as regras de negócio para a implementação das funcionalidades de Autenticação e Gestão de Perfil na API LedgerFlow.
+
+## Funcionalidades e Regras de Negócio
+
+### 1. Cadastro de Usuário (Sign Up)
+- **Campos Obrigatórios:**
+  - `name`: String, deve ser válido e ter no mínimo 3 caracteres.
+  - `email`: String, formato de e-mail válido, único no banco de dados.
+  - `password`: String, com regras de força recomendadas.
+  - `passwordConfirmation`: String, deve ser estritamente igual ao `password` informado.
+- **Regras:**
+  - Validar todos os inputs via DTOs de forma estrita.
+  - Retornar erro (ex: 409 Conflict) em caso de e-mail já existente.
+  - A senha deve passar por um processo de hash (bcrypt ou argon2) antes da persistência no Repository.
+  - As variáveis de ambiente/secrets **não** podem vazar nos retornos de erro ou logs em nenhuma hipótese.
+
+### 2. Login
+- **Inputs:** `email`, `password`.
+- **Regras:**
+  - Validar a existência do usuário e se o hash da senha confere.
+  - Em caso de sucesso, retornar um token JWT seguro.
+  - Retornar as informações básicas do perfil do usuário para o app.
+  - **Segurança:** Retornar mensagem genérica para falha ("E-mail ou senha incorretos"), prevenindo enumeração de usuários.
+
+### 3. Sign Out (Logout)
+- **Regras:**
+  - O app mobile deve apagar o token localmente.
+  - Na API, invalidação do token atual (se for implementada uma abordagem de blacklist) ou gerenciamento de sessão baseada em banco.
+
+### 4. Esqueci a Senha (Forgot Password)
+- **Inputs:** `email`.
+- **Regras:**
+  - Gerar um token de recuperação criptográfico seguro e de curta duração.
+  - Simular o envio de e-mail com instruções (a integração real ocorrerá futuramente, mas a arquitetura deve estar pronta).
+  - Mensagem de sucesso sempre será enviada em formato padrão, mesmo que o e-mail não exista, evitando vazamento de base de usuários.
+
+### 5. Edição de Perfil
+- **Campos Editáveis:** `name`, `email`, `password`.
+- **Regras:**
+  - **Requisito:** Rota autenticada (JwtAuthGuard). O ID do usuário a ser alterado vem obrigatoriamente do payload do Token e não do payload da requisição.
+  - Caso o usuário altere a senha, será necessário o envio de um campo `oldPassword` para validação de segurança.
+  - Se o e-mail for alterado, checar integridade e unicidade na base.
+
+## Arquitetura & Patterns Envolvidos
+- **Controllers**: Validam a estrutura com DTOs e disparam as ações.
+- **DTOs**: Validam regras de payload usando validações (ex: `class-validator`).
+- **Use Cases/Services**: Contêm puramente as regras de negócio de autenticação e validações complexas.
+- **Repositories**: Interface `IUsersRepository` deverá ser implementada para persistência e recuperação de usuários, garantindo o desacoplamento do ORM.
