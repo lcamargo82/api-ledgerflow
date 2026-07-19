@@ -1,43 +1,133 @@
 # Categorias
 
 ## Visão Geral
-Uma **Categoria** serve para classificar as movimentações financeiras (receitas e despesas) do usuário, permitindo análises, relatórios e controle orçamentário. 
-Cada categoria pertence a um `workspaceId` específico, permitindo que diferentes workspaces (ex: Pessoal, Empresa) tenham suas próprias estruturas de categorização.
+Uma **Categoria** classifica movimentações financeiras de um workspace, permitindo filtros, relatórios, orçamento e leitura rápida do histórico financeiro.
+
+No LedgerFlow, categorias pertencem obrigatoriamente a um `workspaceId`. Isso garante que um workspace pessoal, de negócio ou compartilhado mantenha sua própria árvore de classificação sem vazar regras, nomes ou padrões para outros ambientes.
+
+## Status da Implementação
+Parcialmente implementado na base de onboarding.
+
+Implementado:
+- Model `Category` no Prisma.
+- Enum `CategoryType` com `INCOME`, `EXPENSE` e `ADJUSTMENT`.
+- Seed de categorias padrão na criação de workspaces.
+- Categoria sistêmica `Ajuste Inicial de Saldo` para transações gênesis.
+- Unicidade por `workspaceId`, `name` e `type`.
+- Campos de autoria básica: `createdByUserId` e `updatedByUserId`.
+
+Pendente:
+- Endpoints públicos de gestão de categorias.
+- DTOs, service e controller dedicados.
+- Campos visuais `color` e `icon`, caso o frontend dependa deles para exibição.
+- Regras formais para categoria sistêmica não editável.
+- Testes unitários e e2e específicos de categorias.
+
+Arquivos já relacionados:
+- `prisma/schema.prisma`
+- `src/modules/workspaces/workspaces.service.ts`
+- `docs/features/workspaces.md`
+- `docs/features/onboarding-sprints.md`
 
 ## Objetivos
-- Permitir a criação, edição, listagem e arquivamento de categorias (CRUD).
-- Vincular categorias exclusivamente a um workspace.
-- Tipar as categorias como Receita (`INCOME`) ou Despesa (`EXPENSE`).
-- Permitir a customização visual das categorias (cor e ícone) para facilitar a identificação no frontend.
-- Impedir a exclusão física (delete) caso haja movimentações vinculadas, utilizando soft-delete (`active = false`).
+- Permitir listagem, criação, edição e arquivamento de categorias por workspace.
+- Separar categorias de receita, despesa e ajustes sistêmicos.
+- Impedir duplicidade de nomes dentro do mesmo workspace e tipo.
+- Preservar histórico financeiro, evitando exclusão física quando houver movimentações vinculadas.
+- Preparar a API para relatórios por categoria e filtros de extrato.
+- Registrar autoria das alterações relevantes.
 
 ## Modelo de Dados
 
 ### Category
+Campos já existentes:
 - `id`: UUID.
-- `workspaceId`: obrigatório. FK para Workspace.
-- `name`: nome da categoria (ex: "Alimentação", "Salário", "Transporte").
-- `type`: enum `INCOME` ou `EXPENSE`.
-- `color`: cor em formato hexadecimal. Ex: `#EF4444`.
-- `icon`: chave de ícone suportado pelo frontend. Ex: `utensils`, `car`, `briefcase`.
-- `active`: booleano (padrão `true`). Para arquivar categorias que não são mais usadas sem quebrar o histórico.
+- `workspaceId`: obrigatório. FK para `Workspace`.
+- `name`: nome exibido. Ex: `Alimentação`, `Salário`, `Fornecedores`.
+- `type`: enum `INCOME`, `EXPENSE` ou `ADJUSTMENT`.
+- `isSystemDefault`: indica categorias criadas pelo seed do sistema.
+- `active`: booleano para arquivar categorias sem quebrar histórico.
 - `createdByUserId`: usuário que criou a categoria.
-- `updatedByUserId`: usuário que realizou a última atualização.
+- `updatedByUserId`: usuário que realizou a última alteração relevante.
 - `createdAt` e `updatedAt`.
 
-## Endpoints (CRUD)
+Campos recomendados para a sprint de gestão visual:
+- `color`: cor em hexadecimal. Ex: `#EF4444`.
+- `icon`: chave de ícone suportada pelo frontend. Ex: `utensils`, `car`, `briefcase`.
 
-- `GET /workspaces/:workspaceId/categories`
-  Lista todas as categorias do workspace. 
-  Filtros opcionais: `?type=INCOME|EXPENSE`, `?active=true|false`.
-- `POST /workspaces/:workspaceId/categories`
-  Cria uma nova categoria.
-- `GET /workspaces/:workspaceId/categories/:categoryId`
-  Retorna detalhes de uma categoria específica.
-- `PATCH /workspaces/:workspaceId/categories/:categoryId`
-  Atualiza dados de uma categoria (nome, cor, ícone, status ativo). Não deve permitir alteração de `type` se já houver movimentações.
-- `DELETE /workspaces/:workspaceId/categories/:categoryId`
-  Realiza exclusão física apenas se a categoria não possuir movimentações vinculadas. Caso possua, deve retornar erro ou realizar o arquivamento (`active = false`) dependendo da abordagem definida. O recomendado é que o frontend chame o `PATCH` passando `active: false`.
+### CategoryType
+- `INCOME`: categorias usadas em receitas.
+- `EXPENSE`: categorias usadas em despesas.
+- `ADJUSTMENT`: categorias sistêmicas para ajustes de saldo, como `Ajuste Inicial de Saldo`.
+
+`ADJUSTMENT` não deve aparecer por padrão nas telas comuns de seleção de categoria do usuário. Ela existe para manter saldos auditáveis e deve ser tratada como categoria protegida.
+
+## Categorias Padrão
+A criação de workspace já executa seed de categorias iniciais.
+
+### Workspace Pessoal
+Receitas:
+- Salário
+- Rendimentos
+- Reembolso
+- Presentes
+- Outros
+
+Despesas:
+- Moradia
+- Alimentação
+- Transporte
+- Saúde
+- Educação
+- Lazer
+- Assinaturas
+- Compras
+- Impostos e Taxas
+- Outros
+
+### Workspace Negócios
+Receitas:
+- Vendas
+- Prestação de Serviços
+- Rendimentos
+- Reembolso
+- Outros
+
+Despesas:
+- Fornecedores
+- Logística
+- Impostos
+- Folha de Pagamento
+- Marketing
+- Infraestrutura
+- Softwares e Assinaturas
+- Taxas Bancárias
+- Contabilidade
+- Outros
+
+Categoria sistêmica para ambos:
+- Ajuste Inicial de Saldo (`ADJUSTMENT`)
+
+## Endpoints MVP
+- `GET /workspaces/:workspaceId/categories`: lista categorias do workspace.
+- `POST /workspaces/:workspaceId/categories`: cria uma categoria.
+- `GET /workspaces/:workspaceId/categories/:categoryId`: detalha uma categoria.
+- `PATCH /workspaces/:workspaceId/categories/:categoryId`: edita uma categoria.
+- `DELETE /workspaces/:workspaceId/categories/:categoryId`: arquiva ou exclui apenas quando permitido.
+
+### Filtros de Listagem
+`GET /workspaces/:workspaceId/categories`
+
+Filtros:
+- `type=INCOME|EXPENSE|ADJUSTMENT`
+- `active=true|false`
+- `includeSystem=true|false`
+- `search=alimentacao`
+
+Comportamento recomendado:
+- Por padrão, retornar apenas `active = true`.
+- Por padrão, omitir categorias `ADJUSTMENT` em seletores comuns do frontend.
+- Ordenar por `type` e `name`.
 
 ### Payload de Criação
 ```json
@@ -49,14 +139,53 @@ Cada categoria pertence a um `workspaceId` específico, permitindo que diferente
 }
 ```
 
-## Validações
-- `workspaceId` deve pertencer ao usuário autenticado e ele deve ter permissão de acesso.
-- `name` é obrigatório e deve ser único por `workspaceId` e `type` (opcional, dependendo da regra de negócio. Recomenda-se evitar nomes duplicados do mesmo tipo no mesmo workspace).
-- `type` deve ser obrigatoriamente `INCOME` ou `EXPENSE`.
-- Não é possível mudar o `type` de uma categoria após ela ser utilizada em uma movimentação.
+### Payload de Edição
+```json
+{
+  "name": "Mercado e Alimentação",
+  "color": "#F97316",
+  "icon": "shopping-basket",
+  "active": true
+}
+```
 
-## Categorias Padrão (Seed)
-Na criação de um novo Workspace (Onboarding), o sistema deve idealmente fazer o seed (inserção automática) de categorias básicas comuns para poupar o tempo do usuário:
-- Despesas: Alimentação, Moradia, Transporte, Saúde, Lazer.
-- Receitas: Salário, Rendimentos, Outros.
-Isso deve ser mapeado no fluxo de criação do workspace.
+## Regras de Negócio
+- Todo endpoint deve validar membership do usuário autenticado no `workspaceId`.
+- Apenas `OWNER`, `ADMIN` e `EDITOR` podem criar ou editar categorias.
+- `VIEWER` pode listar e detalhar, mas não pode alterar.
+- `name` é obrigatório, deve ter limite mínimo e máximo e deve ser único por `workspaceId` e `type`.
+- `type` é obrigatório na criação.
+- `type` não deve ser alterado após a categoria possuir transações vinculadas.
+- Categorias `isSystemDefault = true` podem ser renomeadas apenas se a decisão de produto permitir.
+- Categorias `ADJUSTMENT` devem ser protegidas contra alteração comum e não devem ser excluídas.
+- Exclusão física só é permitida quando não houver transações vinculadas.
+- Quando houver transações vinculadas, `DELETE` deve arquivar a categoria com `active = false` ou retornar erro claro orientando o arquivamento. A recomendação do produto é arquivar.
+- Uma categoria arquivada deve continuar aparecendo em transações históricas.
+
+## Segurança
+- Nunca aceitar `createdByUserId` ou `updatedByUserId` no payload.
+- Sempre derivar autoria do usuário autenticado pelo JWT.
+- Sempre filtrar por `workspaceId` além de `categoryId`.
+- Retornar `404` quando a categoria não pertencer a um workspace acessível pelo usuário.
+- Evitar mensagens de erro que revelem existência de categorias em workspaces de terceiros.
+
+## Swagger e Contrato
+A implementação deve documentar:
+- `ApiTags('Categories')`.
+- `ApiBearerAuth('access-token')`.
+- `ApiParam` para `workspaceId` e `categoryId`.
+- `ApiQuery` para filtros.
+- DTOs de criação e edição com `ApiProperty` e `ApiPropertyOptional`.
+- Exemplos de respostas para lista, criação, edição e arquivamento.
+
+## Critérios de Aceite
+- [ ] Usuário autenticado lista apenas categorias de workspaces aos quais pertence.
+- [ ] Filtros por `type`, `active`, `includeSystem` e `search` funcionam corretamente.
+- [ ] Usuário com role de escrita cria categoria válida.
+- [ ] Usuário `VIEWER` não cria, edita nem arquiva categoria.
+- [ ] Nomes duplicados no mesmo workspace e tipo são recusados.
+- [ ] Categorias com transações vinculadas não são excluídas fisicamente.
+- [ ] Categoria arquivada permanece disponível no histórico de transações.
+- [ ] Categorias sistêmicas de ajuste não podem ser removidas por endpoints comuns.
+- [ ] Swagger expõe o contrato completo.
+- [ ] Testes cobrem sucesso, permissão, duplicidade, arquivamento e proteção de categorias sistêmicas.

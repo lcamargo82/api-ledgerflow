@@ -1,95 +1,218 @@
 # Movimentações (Transações)
 
 ## Visão Geral
-As **Movimentações** (`Transactions`) são os registros financeiros centrais do LedgerFlow. Elas representam a entrada (receita), saída (despesa) ou transferência de valores entre as contas do usuário.
-Toda movimentação está vinculada a um `workspaceId`, a pelo menos uma `accountId` (Conta) e, no caso de receitas e despesas, a uma `categoryId` (Categoria).
+As **Movimentações** (`Transactions`) são os registros financeiros centrais do LedgerFlow. Elas representam eventos que alteram, explicam ou compõem o saldo das contas de um workspace.
+
+No estado atual da API, transações já existem para registrar o saldo inicial das contas por meio da transação gênesis. A próxima evolução é expor a gestão manual de receitas e despesas para o aplicativo mobile. Transferências entre contas devem entrar em uma sprint posterior, pois exigem alteração no modelo atual.
+
+## Status da Implementação
+Parcialmente implementado como base de saldo inicial.
+
+Implementado:
+- Model `Transaction` no Prisma.
+- Enum `TransactionType` com `INCOME` e `EXPENSE`.
+- Enum `TransactionOrigin` com `MANUAL` e `INITIAL_BALANCE`.
+- Relação obrigatória com `workspaceId` e `accountId`.
+- Relação opcional com `categoryId`.
+- Valores monetários em `Decimal(14,2)`.
+- Data operacional em `occurredAt`.
+- Campos de autoria: `createdByUserId` e `updatedByUserId`.
+- Criação automática de transação gênesis ao cadastrar conta com saldo inicial diferente de zero.
+
+Pendente:
+- `TransactionsModule`, controller, service e DTOs dedicados.
+- Endpoints CRUD de receitas e despesas manuais.
+- Recalculo consistente de saldo ao editar ou remover transações.
+- Paginação, filtros e ordenação para extrato.
+- Transferências entre contas.
+- Status de agendamento ou conciliação, caso o produto precise de transações futuras.
+- Testes unitários e e2e específicos.
+
+Arquivos já relacionados:
+- `prisma/schema.prisma`
+- `src/modules/accounts/accounts.service.ts`
+- `docs/features/accounts.md`
 
 ## Objetivos
-- Registrar todas as atividades financeiras: Receitas, Despesas e Transferências.
-- Atualizar os saldos das contas envolvidas de acordo com o tipo de movimentação.
-- Garantir a integridade dos saldos através de regras de negócio específicas para saídas e transferências.
-- Fornecer os dados necessários para relatórios, extratos e dashboards.
+- Registrar receitas e despesas manuais no workspace.
+- Manter o saldo de contas derivado das transações persistidas.
+- Permitir filtros para extrato, dashboard e relatórios.
+- Garantir consistência transacional em criação, edição e remoção.
+- Bloquear uso de contas, categorias ou workspaces fora do escopo do usuário autenticado.
+- Preparar a evolução para transferências sem comprometer o MVP de receitas/despesas.
 
-## Modelo de Dados
+## Modelo de Dados Atual
 
 ### Transaction
+Campos existentes:
 - `id`: UUID.
-- `workspaceId`: obrigatório. FK para Workspace.
-- `accountId`: obrigatório. FK para Account. (Conta principal da transação).
-- `destinationAccountId`: opcional. FK para Account. (Usado **apenas** para transferências, indica a conta que receberá o valor).
-- `categoryId`: obrigatório para Receitas e Despesas. FK para Category. (Pode ser nulo para transferências).
-- `type`: enum `INCOME` (Receita), `EXPENSE` (Despesa) ou `TRANSFER` (Transferência).
-- `amount`: valor monetário da transação, sempre armazenado como valor absoluto positivo (`Decimal`).
-- `date`: data da transação (para controle de caixa e competência).
-- `description`: descrição ou observação sobre a transação (ex: "Almoço de domingo", "Transferência para poupança").
-- `status`: enum `PENDING` ou `COMPLETED`. (Transações futuras ficam pendentes, consolidadas ficam completadas e afetam o saldo atual).
-- `createdByUserId`: usuário que registrou.
-- `updatedByUserId`: usuário que modificou por último.
+- `workspaceId`: obrigatório. FK para `Workspace`.
+- `accountId`: obrigatório. FK para `Account`.
+- `categoryId`: opcional. FK para `Category`.
+- `type`: enum `INCOME` ou `EXPENSE`.
+- `origin`: enum `MANUAL` ou `INITIAL_BALANCE`.
+- `amount`: valor monetário absoluto positivo, armazenado como `Decimal(14,2)`.
+- `description`: descrição exibida no extrato.
+- `occurredAt`: data e hora em que a movimentação ocorreu para fins de caixa.
+- `createdByUserId`: usuário que criou.
+- `updatedByUserId`: usuário que alterou por último.
 - `createdAt` e `updatedAt`.
 
-## Regras de Negócio e Impacto no Saldo
+### TransactionType
+- `INCOME`: receita. Soma ao saldo da conta.
+- `EXPENSE`: despesa. Subtrai do saldo da conta.
 
-As alterações de saldo devem ocorrer de forma transacional no banco de dados.
+### TransactionOrigin
+- `MANUAL`: lançamento criado pelo usuário.
+- `INITIAL_BALANCE`: lançamento sistêmico criado junto da conta para representar saldo inicial.
 
-### 1. Despesas (`EXPENSE`)
-- **Regra de Saldo Negativo:** É **PERMITIDO** que o saldo da conta fique negativo após uma despesa. 
-- O sistema não deve bloquear o usuário de registrar uma despesa de R$ 100,00 em uma conta que possui apenas R$ 50,00, resultando em um saldo de -R$ 50,00 (cheque especial, limite, ou apenas controle).
-- Impacto: Subtrai o `amount` do saldo atual da `accountId`.
+## Modelo de Dados Futuro para Transferências
+Transferências ainda não cabem no schema atual porque `TransactionType` não possui `TRANSFER` e `Transaction` não possui `destinationAccountId`.
 
-### 2. Receitas (`INCOME`)
-- Impacto: Adiciona o `amount` ao saldo atual da `accountId`.
+Campos e enum sugeridos para uma sprint posterior:
+- Adicionar `TRANSFER` ao enum `TransactionType`.
+- Adicionar `destinationAccountId` opcional em `Transaction`.
+- Validar que `accountId` é conta de origem e `destinationAccountId` é conta de destino.
+- Garantir que ambas as contas pertencem ao mesmo `workspaceId`.
 
-### 3. Transferências (`TRANSFER`)
-- Para transferências, a `accountId` atua como Conta de Origem e a `destinationAccountId` atua como Conta de Destino.
-- **Regra de Saldo Suficiente:** É **PROIBIDO** transferir um valor maior do que o saldo atual da conta de origem.
-- O sistema DEVE validar o saldo da conta de origem (`accountId`) no momento do registro da transferência. Se o saldo for menor que o `amount` solicitado, a API deve retornar um erro de validação (ex: `400 Bad Request` com mensagem "Saldo insuficiente para realizar esta transferência").
-- Impacto: Subtrai o `amount` da `accountId` e adiciona o `amount` na `destinationAccountId`. (Ambas as contas devem pertencer ao mesmo `workspaceId`).
+Decisão recomendada para o MVP imediato:
+- Implementar primeiro receitas e despesas usando o schema atual.
+- Implementar transferências em sprint separada, com migração explícita e testes dedicados de saldo.
 
-## Endpoints (CRUD)
+## Regras de Saldo
+O saldo de uma conta deve ser calculado a partir das transações vinculadas a ela.
 
-- `GET /workspaces/:workspaceId/transactions`
-  Lista as movimentações. 
-  Filtros importantes: `?accountId=X`, `?type=INCOME`, `?categoryId=Y`, `?startDate=Z&endDate=W`.
-  Deve suportar paginação.
-  
-- `POST /workspaces/:workspaceId/transactions`
-  Cria uma nova movimentação. Valida as regras de saldo para `TRANSFER`.
-  
-- `GET /workspaces/:workspaceId/transactions/:transactionId`
-  Detalha uma movimentação.
-  
-- `PATCH /workspaces/:workspaceId/transactions/:transactionId`
-  Atualiza uma movimentação. Se o valor (`amount`) for alterado, o backend deve calcular o delta e reajustar os saldos das contas impactadas de forma consistente. Se o tipo for mudado para `TRANSFER` (ou se o valor de uma transferência aumentar), deve-se validar novamente a regra de saldo suficiente.
+### Receita (`INCOME`)
+- `amount` deve ser positivo.
+- Soma ao saldo da `accountId`.
+- Deve possuir `categoryId` de tipo `INCOME`, exceto quando `origin = INITIAL_BALANCE` e a categoria sistêmica de ajuste for usada.
 
-- `DELETE /workspaces/:workspaceId/transactions/:transactionId`
-  Remove a movimentação. O backend deve realizar a operação reversa (ex: se apagar uma despesa, deve devolver o saldo para a conta correspondente).
+### Despesa (`EXPENSE`)
+- `amount` deve ser positivo.
+- Subtrai do saldo da `accountId`.
+- É permitido que o saldo da conta fique negativo após uma despesa.
+- Deve possuir `categoryId` de tipo `EXPENSE`, exceto quando `origin = INITIAL_BALANCE` e a categoria sistêmica de ajuste for usada.
 
-## Exemplos de Payload
+### Ajuste Inicial
+- Deve ser criado apenas pela API durante criação de conta.
+- Usa `origin = INITIAL_BALANCE`.
+- Usa a categoria sistêmica `Ajuste Inicial de Saldo` do workspace.
+- Saldo inicial positivo gera `INCOME`.
+- Saldo inicial negativo gera `EXPENSE` com `amount` absoluto.
+- Não deve ser editado ou excluído pelos endpoints comuns de transação manual, salvo decisão explícita de produto.
 
-### Criação de Despesa
+### Transferência (`TRANSFER`) - Futuro
+- Conta origem: `accountId`.
+- Conta destino: `destinationAccountId`.
+- Deve ser proibido transferir valor maior que o saldo atual da origem.
+- Despesas comuns podem deixar saldo negativo; transferências não.
+- A operação deve subtrair da origem e somar no destino de forma atômica.
+
+## Endpoints MVP
+- `GET /workspaces/:workspaceId/transactions`: lista movimentações do workspace.
+- `POST /workspaces/:workspaceId/transactions`: cria receita ou despesa manual.
+- `GET /workspaces/:workspaceId/transactions/:transactionId`: detalha uma movimentação.
+- `PATCH /workspaces/:workspaceId/transactions/:transactionId`: edita uma movimentação manual.
+- `DELETE /workspaces/:workspaceId/transactions/:transactionId`: remove ou estorna uma movimentação manual.
+
+### Filtros de Listagem
+`GET /workspaces/:workspaceId/transactions`
+
+Filtros:
+- `accountId`
+- `categoryId`
+- `type=INCOME|EXPENSE`
+- `origin=MANUAL|INITIAL_BALANCE`
+- `startDate=2026-07-01`
+- `endDate=2026-07-31`
+- `search=mercado`
+- `page=1`
+- `perPage=20`
+
+Comportamento recomendado:
+- Ordenação padrão por `occurredAt DESC`, depois `createdAt DESC`.
+- Paginação obrigatória para evitar respostas grandes no mobile.
+- `perPage` com limite máximo.
+- Sempre filtrar por `workspaceId`.
+
+### Payload de Criação de Despesa
 ```json
 {
   "accountId": "uuid-conta-corrente",
   "categoryId": "uuid-categoria-alimentacao",
   "type": "EXPENSE",
-  "amount": 150.50,
-  "date": "2026-07-19",
-  "description": "Jantar",
-  "status": "COMPLETED"
+  "amount": 150.5,
+  "occurredAt": "2026-07-19T12:00:00.000Z",
+  "description": "Jantar"
 }
 ```
-*(Permitido mesmo se o saldo da conta ficar negativo)*
 
-### Criação de Transferência
+### Payload de Criação de Receita
 ```json
 {
   "accountId": "uuid-conta-corrente",
-  "destinationAccountId": "uuid-conta-poupanca",
-  "type": "TRANSFER",
-  "amount": 500.00,
-  "date": "2026-07-19",
-  "description": "Guardando dinheiro",
-  "status": "COMPLETED"
+  "categoryId": "uuid-categoria-salario",
+  "type": "INCOME",
+  "amount": 5000,
+  "occurredAt": "2026-07-19T12:00:00.000Z",
+  "description": "Salário"
 }
 ```
-*(Backend deve bloquear se o saldo da "uuid-conta-corrente" for menor que 500.00)*
+
+### Payload Futuro de Transferência
+```json
+{
+  "accountId": "uuid-conta-origem",
+  "destinationAccountId": "uuid-conta-destino",
+  "type": "TRANSFER",
+  "amount": 500,
+  "occurredAt": "2026-07-19T12:00:00.000Z",
+  "description": "Reserva do mês"
+}
+```
+
+## Regras de Negócio
+- Todo endpoint deve validar membership do usuário autenticado no `workspaceId`.
+- Apenas `OWNER`, `ADMIN` e `EDITOR` podem criar, editar ou remover transações.
+- `VIEWER` pode listar e detalhar, mas não pode alterar.
+- `accountId` deve pertencer ao mesmo `workspaceId` da rota.
+- `categoryId`, quando informado, deve pertencer ao mesmo `workspaceId`.
+- `categoryId` deve estar ativa para novos lançamentos manuais.
+- O `type` da categoria deve ser compatível com o `type` da transação.
+- `amount` deve ser positivo e ter no máximo duas casas decimais.
+- `description` deve ter limite mínimo e máximo.
+- `occurredAt` deve ser uma data válida.
+- Transações `INITIAL_BALANCE` não devem ser alteradas por endpoints comuns de movimentação manual.
+- Edição de `amount`, `type`, `accountId`, `categoryId` ou `occurredAt` deve preservar consistência dos saldos retornados pelo dashboard.
+- Remoção física de transação manual pode ser aceita no MVP, desde que o saldo seja derivado das transações restantes. Para auditoria avançada, a evolução recomendada é estorno ou soft-delete.
+
+## Segurança
+- Nunca aceitar `createdByUserId`, `updatedByUserId`, `origin` ou IDs de autoria vindos do payload público.
+- `origin` deve ser definido pelo backend.
+- Sempre validar `workspaceId` junto de `transactionId`.
+- Retornar `404` quando a transação não pertencer a um workspace acessível.
+- Nunca permitir que conta ou categoria de outro workspace seja vinculada por ID.
+- Usar transação de banco para operações que envolvam mais de uma alteração de saldo ou entidade.
+
+## Swagger e Contrato
+A implementação deve documentar:
+- `ApiTags('Transactions')`.
+- `ApiBearerAuth('access-token')`.
+- `ApiParam` para `workspaceId` e `transactionId`.
+- `ApiQuery` para filtros e paginação.
+- DTOs de criação e edição com `ApiProperty` e `ApiPropertyOptional`.
+- Exemplos de resposta para lista paginada, criação, edição e remoção.
+
+## Critérios de Aceite
+- [ ] Usuário autenticado lista apenas transações de workspaces aos quais pertence.
+- [ ] Listagem possui paginação, ordenação e filtros principais.
+- [ ] Usuário com role de escrita cria receita manual válida.
+- [ ] Usuário com role de escrita cria despesa manual válida.
+- [ ] Despesa pode deixar saldo negativo.
+- [ ] Conta e categoria devem pertencer ao mesmo workspace da rota.
+- [ ] Categoria de receita não pode ser usada em despesa, e vice-versa.
+- [ ] Usuário `VIEWER` não cria, edita nem remove transações.
+- [ ] Transações `INITIAL_BALANCE` ficam protegidas contra edição e remoção comum.
+- [ ] Dashboard continua retornando saldo correto após criação, edição e remoção.
+- [ ] Swagger expõe o contrato completo.
+- [ ] Testes cobrem sucesso, permissões, validações de workspace, compatibilidade de categoria e recalculo de saldo.
