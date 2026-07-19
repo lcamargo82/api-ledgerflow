@@ -7,6 +7,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -18,7 +19,10 @@ import type { AuthenticatedRequest } from './guards/jwt-auth.guard';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly workspacesService: WorkspacesService,
+  ) {}
 
   @Public()
   @Post('signup')
@@ -110,7 +114,38 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Retorna o usuario autenticado a partir do JWT' })
-  me(@Request() request: AuthenticatedRequest) {
-    return request.user;
+  @ApiOkResponse({
+    schema: {
+      example: {
+        sub: 'user-id',
+        email: 'leandro@example.com',
+        tokenVersion: 0,
+        onboardingRequired: false,
+        currentWorkspace: {
+          id: 'workspace-id',
+          name: 'Pessoal',
+          type: 'PERSONAL',
+          currency: 'BRL',
+          active: true,
+        },
+        workspaces: [
+          {
+            id: 'workspace-id',
+            name: 'Pessoal',
+            type: 'PERSONAL',
+            currency: 'BRL',
+            active: true,
+          },
+        ],
+      },
+    },
+  })
+  async me(@Request() request: AuthenticatedRequest) {
+    const onboarding = await this.workspacesService.getOnboardingStatus(request.user.sub);
+
+    return {
+      ...request.user,
+      ...onboarding,
+    };
   }
 }

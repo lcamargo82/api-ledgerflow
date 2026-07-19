@@ -1,0 +1,202 @@
+[
+  {
+    "id": "alelo",
+    "name": "Alelo",
+    "shortName": "Alelo",
+    "type": "BENEFITS",
+    "icon": "benefits-card",
+    "active": true
+  },
+  {
+    "id": "banco-brasil",
+    "name": "Banco do Brasil",
+    "shortName": "BB",
+    "compeCode": "001",
+    "ispb": "00000000",
+    "type": "BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "banco-inter",
+    "name": "Banco Inter",
+    "shortName": "Inter",
+    "compeCode": "077",
+    "ispb": "00416968",
+    "type": "DIGITAL_BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "banco-pan",
+    "name": "Banco Pan",
+    "shortName": "Pan",
+    "compeCode": "623",
+    "ispb": "59285411",
+    "type": "BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "bradesco",
+    "name": "Bradesco",
+    "shortName": "Bradesco",
+    "compeCode": "237",
+    "ispb": "60746948",
+    "type": "BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "btg-pactual",
+    "name": "BTG Pactual",
+    "shortName": "BTG",
+    "compeCode": "208",
+    "ispb": "30306294",
+    "type": "BROKER",
+    "icon": "chart-line",
+    "active": true
+  },
+  {
+    "id": "c6-bank",
+    "name": "C6 Bank",
+    "shortName": "C6",
+    "compeCode": "336",
+    "ispb": "31872495",
+    "type": "DIGITAL_BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "caixa",
+    "name": "Caixa Economica Federal",
+    "shortName": "Caixa",
+    "compeCode": "104",
+    "ispb": "00360305",
+    "type": "BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "flash-beneficios",
+    "name": "Flash Beneficios",
+    "shortName": "Flash",
+    "type": "BENEFITS",
+    "icon": "benefits-card",
+    "active": true
+  },
+  {
+    "id": "itau",
+    "name": "Itau",
+    "shortName": "Itau",
+    "compeCode": "341",
+    "ispb": "60701190",
+    "type": "BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "mercado-pago",
+    "name": "Mercado Pago",
+    "shortName": "Mercado Pago",
+    "compeCode": "323",
+    "ispb": "10573521",
+    "type": "PAYMENT_INSTITUTION",
+    "icon": "wallet",
+    "active": true
+  },
+  {
+    "id": "nubank",
+    "name": "Nubank",
+    "shortName": "Nu",
+    "compeCode": "260",
+    "ispb": "18236120",
+    "type": "DIGITAL_BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "pagbank",
+    "name": "PagBank",
+    "shortName": "PagBank",
+    "compeCode": "290",
+    "ispb": "08561701",
+    "type": "PAYMENT_INSTITUTION",
+    "icon": "wallet",
+    "active": true
+  },
+  {
+    "id": "picpay",
+    "name": "PicPay",
+    "shortName": "PicPay",
+    "compeCode": "380",
+    "ispb": "22896431",
+    "type": "PAYMENT_INSTITUTION",
+    "icon": "wallet",
+    "active": true
+  },
+  {
+    "id": "rico",
+    "name": "Rico",
+    "shortName": "Rico",
+    "type": "BROKER",
+    "icon": "chart-line",
+    "active": true
+  },
+  {
+    "id": "santander",
+    "name": "Santander",
+    "shortName": "Santander",
+    "compeCode": "033",
+    "ispb": "90400888",
+    "type": "BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "sicoob",
+    "name": "Sicoob",
+    "shortName": "Sicoob",
+    "compeCode": "756",
+    "ispb": "02038232",
+    "type": "BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "sicredi",
+    "name": "Sicredi",
+    "shortName": "Sicredi",
+    "compeCode": "748",
+    "ispb": "01181521",
+    "type": "BANK",
+    "icon": "bank",
+    "active": true
+  },
+  {
+    "id": "ticket",
+    "name": "Ticket",
+    "shortName": "Ticket",
+    "type": "BENEFITS",
+    "icon": "benefits-card",
+    "active": true
+  },
+  {
+    "id": "xp-investimentos",
+    "name": "XP Investimentos",
+    "shortName": "XP",
+    "compeCode": "102",
+    "ispb": "02332886",
+    "type": "BROKER",
+    "icon": "chart-line",
+    "active": true
+  },
+  {
+    "id": "other",
+    "name": "Outros",
+    "shortName": "Outros",
+    "type": "OTHER",
+    "icon": "landmark",
+    "active": true
+  }
+]

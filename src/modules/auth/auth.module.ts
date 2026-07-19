@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import type { SignOptions } from 'jsonwebtoken';
 import { EmailModule } from '../email/email.module';
 import { UsersModule } from '../users/users.module';
+import { WorkspacesModule } from '../workspaces/workspaces.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './guards/jwt.strategy';
@@ -15,6 +16,7 @@ import { JwtStrategy } from './guards/jwt.strategy';
     PassportModule,
     EmailModule,
     UsersModule,
+    WorkspacesModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
