@@ -16,6 +16,11 @@ type AccountWithBalance = Account & {
   balance: string;
 };
 
+type MonthPeriod = {
+  startDate: Date;
+  endDate: Date;
+};
+
 @Injectable()
 export class AccountsService {
   constructor(
@@ -183,7 +188,7 @@ export class AccountsService {
     };
   }
 
-  async getDashboardSummary(userId: string, workspaceId: string) {
+  async getDashboardSummary(userId: string, workspaceId: string, month?: number, year?: number) {
     const accounts = await this.list(userId, workspaceId);
     const totalIncluded = accounts.reduce((total, account) => {
       if (!account.includeInTotal) return total;
@@ -193,12 +198,92 @@ export class AccountsService {
       (total, account) => total.plus(account.balance),
       new Prisma.Decimal(0),
     );
+    const expensesByCategory = await this.getExpensesByCategory(workspaceId, month, year);
 
     return {
       workspaceId,
+      currentBalance: this.formatDecimal(totalIncluded),
       totalIncluded: this.formatDecimal(totalIncluded),
       totalOverall: this.formatDecimal(totalOverall),
+      expensesByCategory,
+      budgetStatus: {
+        hasBudget: false,
+        message: 'Voce ainda nao tem um planejamento definido para esse mes.',
+      },
       accounts,
+    };
+  }
+
+  async getCurrentBalance(userId: string, workspaceId: string) {
+    const accounts = await this.list(userId, workspaceId);
+    const currentBalance = accounts.reduce((total, account) => {
+      if (!account.includeInTotal) return total;
+      return total.plus(account.balance);
+    }, new Prisma.Decimal(0));
+
+    return this.formatDecimal(currentBalance);
+  }
+
+  private async getExpensesByCategory(workspaceId: string, month?: number, year?: number) {
+    const period = this.resolveMonthPeriod(month, year);
+    const groupedExpenses = await this.prisma.transaction.groupBy({
+      by: ['categoryId'],
+      where: {
+        workspaceId,
+        type: TransactionType.EXPENSE,
+        occurredAt: {
+          gte: period.startDate,
+          lt: period.endDate,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+      orderBy: {
+        _sum: {
+          amount: 'desc',
+        },
+      },
+    });
+
+    const categoryIds = groupedExpenses
+      .map((group) => group.categoryId)
+      .filter((categoryId): categoryId is string => Boolean(categoryId));
+    const categories = await this.prisma.category.findMany({
+      where: {
+        id: {
+          in: categoryIds,
+        },
+        workspaceId,
+      },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+      },
+    });
+    const categoriesById = new Map(categories.map((category) => [category.id, category]));
+
+    return groupedExpenses.map((group) => {
+      const category = group.categoryId ? categoriesById.get(group.categoryId) : undefined;
+
+      return {
+        categoryId: group.categoryId,
+        name: category?.name ?? 'Sem categoria',
+        color: category?.color ?? '#64748B',
+        totalAmount: this.formatDecimal(group._sum.amount ?? new Prisma.Decimal(0)),
+      };
+    });
+  }
+
+  private resolveMonthPeriod(month?: number, year?: number): MonthPeriod {
+    const now = new Date();
+    const resolvedMonth = month ?? now.getMonth() + 1;
+    const resolvedYear = year ?? now.getFullYear();
+
+    return {
+      startDate: new Date(Date.UTC(resolvedYear, resolvedMonth - 1, 1)),
+      endDate: new Date(Date.UTC(resolvedYear, resolvedMonth, 1)),
     };
   }
 

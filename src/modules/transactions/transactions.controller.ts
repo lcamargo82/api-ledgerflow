@@ -10,6 +10,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { MonthlyPeriodQueryDto } from '../../common/dto/monthly-period-query.dto';
 import type { AuthenticatedRequest } from '../auth/guards/jwt-auth.guard';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { ListTransactionsDto } from './dto/list-transactions.dto';
@@ -21,6 +22,35 @@ import { TransactionsService } from './transactions.service';
 @Controller('workspaces/:workspaceId/transactions')
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
+
+  @Get('monthly-summary')
+  @ApiOperation({ summary: 'Retorna consolidadores mensais de movimentacoes' })
+  @ApiParam({ name: 'workspaceId', example: 'workspace-id' })
+  @ApiQuery({ name: 'month', required: false, example: 7, description: 'Mes de referencia' })
+  @ApiQuery({ name: 'year', required: false, example: 2026, description: 'Ano de referencia' })
+  @ApiNotFoundResponse({ description: 'Workspace nao encontrado ou inacessivel' })
+  @ApiOkResponse({
+    schema: {
+      example: {
+        currentBalance: '743.70',
+        monthlyBalance: '-756.30',
+        totalIncomes: '500.00',
+        totalExpenses: '1256.30',
+      },
+    },
+  })
+  monthlySummary(
+    @Request() request: AuthenticatedRequest,
+    @Param('workspaceId') workspaceId: string,
+    @Query() query: MonthlyPeriodQueryDto,
+  ) {
+    return this.transactionsService.getMonthlySummary(
+      request.user.sub,
+      workspaceId,
+      query.month,
+      query.year,
+    );
+  }
 
   @Get()
   @ApiOperation({ summary: 'Lista movimentacoes do workspace com filtros e paginacao' })
@@ -145,4 +175,3 @@ export class TransactionsController {
     return this.transactionsService.remove(request.user.sub, workspaceId, transactionId);
   }
 }
-

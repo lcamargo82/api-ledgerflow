@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { CategoryType, Prisma, TransactionOrigin, TransactionType } from '@prisma/client';
+import type { AccountsService } from '../accounts/accounts.service';
 import type { WorkspacesService } from '../workspaces/workspaces.service';
 import { TransactionsService } from './transactions.service';
 
@@ -66,6 +67,7 @@ describe('TransactionsService', () => {
       findFirst: jest.Mock;
       update: jest.Mock;
       delete: jest.Mock;
+      groupBy: jest.Mock;
     };
     account: {
       findFirst: jest.Mock;
@@ -75,6 +77,7 @@ describe('TransactionsService', () => {
     };
   };
   let workspacesService: jest.Mocked<Pick<WorkspacesService, 'assertCanRead' | 'assertCanWrite'>>;
+  let accountsService: jest.Mocked<Pick<AccountsService, 'getCurrentBalance'>>;
   let service: TransactionsService;
 
   beforeEach(() => {
@@ -87,6 +90,7 @@ describe('TransactionsService', () => {
         findFirst: jest.fn().mockResolvedValue(transaction),
         update: jest.fn().mockResolvedValue(transaction),
         delete: jest.fn(),
+        groupBy: jest.fn().mockResolvedValue([]),
       },
       account: {
         findFirst: jest.fn().mockResolvedValue({ id: 'account-1' }),
@@ -99,7 +103,14 @@ describe('TransactionsService', () => {
       assertCanRead: jest.fn().mockResolvedValue({ role: 'OWNER' }),
       assertCanWrite: jest.fn().mockResolvedValue({ role: 'OWNER' }),
     };
-    service = new TransactionsService(prisma as never, workspacesService as never);
+    accountsService = {
+      getCurrentBalance: jest.fn().mockResolvedValue('743.70'),
+    };
+    service = new TransactionsService(
+      prisma as never,
+      workspacesService as never,
+      accountsService as never,
+    );
   });
 
   it('creates a manual expense transaction', async () => {
@@ -166,6 +177,43 @@ describe('TransactionsService', () => {
         perPage: 20,
         total: 1,
         totalPages: 1,
+      },
+    });
+  });
+
+  it('summarizes monthly transactions and current balance', async () => {
+    prisma.transaction.groupBy.mockResolvedValue([
+      {
+        type: TransactionType.INCOME,
+        _sum: {
+          amount: new Prisma.Decimal(500),
+        },
+      },
+      {
+        type: TransactionType.EXPENSE,
+        _sum: {
+          amount: new Prisma.Decimal(1256.3),
+        },
+      },
+    ]);
+
+    await expect(service.getMonthlySummary('user-1', 'workspace-1', 7, 2026)).resolves.toEqual({
+      currentBalance: '743.70',
+      monthlyBalance: '-756.30',
+      totalIncomes: '500.00',
+      totalExpenses: '1256.30',
+    });
+
+    expect(workspacesService.assertCanRead.mock.calls).toContainEqual(['user-1', 'workspace-1']);
+    expect(accountsService.getCurrentBalance.mock.calls).toEqual([['user-1', 'workspace-1']]);
+    expect(prisma.transaction.groupBy.mock.calls[0][0]).toMatchObject({
+      by: ['type'],
+      where: {
+        workspaceId: 'workspace-1',
+        occurredAt: {
+          gte: new Date('2026-07-01T00:00:00.000Z'),
+          lt: new Date('2026-08-01T00:00:00.000Z'),
+        },
       },
     });
   });

@@ -1,6 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { CategoryType, Prisma, TransactionOrigin, TransactionType, type Transaction } from '@prisma/client';
+import {
+  CategoryType,
+  Prisma,
+  TransactionOrigin,
+  TransactionType,
+  type Transaction,
+} from '@prisma/client';
 import { PrismaService } from '../../database/prisma/prisma.service';
+import { AccountsService } from '../accounts/accounts.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { ListTransactionsDto } from './dto/list-transactions.dto';
@@ -23,11 +30,17 @@ type TransactionWithRelations = Transaction & {
   } | null;
 };
 
+type MonthPeriod = {
+  startDate: Date;
+  endDate: Date;
+};
+
 @Injectable()
 export class TransactionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspacesService: WorkspacesService,
+    private readonly accountsService: AccountsService,
   ) {}
 
   async list(userId: string, workspaceId: string, filters: ListTransactionsDto) {
@@ -80,6 +93,38 @@ export class TransactionsService {
     });
 
     return this.serialize(transaction);
+  }
+
+  async getMonthlySummary(userId: string, workspaceId: string, month?: number, year?: number) {
+    await this.workspacesService.assertCanRead(userId, workspaceId);
+
+    const period = this.resolveMonthPeriod(month, year);
+    const [groupedTransactions, currentBalance] = await Promise.all([
+      this.prisma.transaction.groupBy({
+        by: ['type'],
+        where: {
+          workspaceId,
+          occurredAt: {
+            gte: period.startDate,
+            lt: period.endDate,
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      this.accountsService.getCurrentBalance(userId, workspaceId),
+    ]);
+
+    const totalIncomes = this.getGroupedAmount(groupedTransactions, TransactionType.INCOME);
+    const totalExpenses = this.getGroupedAmount(groupedTransactions, TransactionType.EXPENSE);
+
+    return {
+      currentBalance,
+      monthlyBalance: this.formatDecimal(totalIncomes.minus(totalExpenses)),
+      totalIncomes: this.formatDecimal(totalIncomes),
+      totalExpenses: this.formatDecimal(totalExpenses),
+    };
   }
 
   async findOne(userId: string, workspaceId: string, transactionId: string) {
@@ -175,6 +220,32 @@ export class TransactionsService {
             },
           }
         : {}),
+    };
+  }
+
+  private getGroupedAmount(
+    groupedTransactions: Array<{
+      type: TransactionType;
+      _sum: {
+        amount: Prisma.Decimal | null;
+      };
+    }>,
+    type: TransactionType,
+  ) {
+    return (
+      groupedTransactions.find((groupedTransaction) => groupedTransaction.type === type)?._sum
+        .amount ?? new Prisma.Decimal(0)
+    );
+  }
+
+  private resolveMonthPeriod(month?: number, year?: number): MonthPeriod {
+    const now = new Date();
+    const resolvedMonth = month ?? now.getMonth() + 1;
+    const resolvedYear = year ?? now.getFullYear();
+
+    return {
+      startDate: new Date(Date.UTC(resolvedYear, resolvedMonth - 1, 1)),
+      endDate: new Date(Date.UTC(resolvedYear, resolvedMonth, 1)),
     };
   }
 
@@ -279,4 +350,3 @@ export class TransactionsService {
     return value.toFixed(2);
   }
 }
-

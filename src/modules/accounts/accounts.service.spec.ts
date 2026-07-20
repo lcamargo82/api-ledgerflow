@@ -54,6 +54,9 @@ describe('AccountsService', () => {
     transaction: {
       groupBy: jest.Mock;
     };
+    category: {
+      findMany: jest.Mock;
+    };
   };
   let tx: {
     account: {
@@ -95,6 +98,9 @@ describe('AccountsService', () => {
       transaction: {
         groupBy: jest.fn().mockResolvedValue([]),
       },
+      category: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     };
     workspacesService = {
       assertCanRead: jest.fn().mockResolvedValue({ role: 'OWNER' }),
@@ -123,8 +129,9 @@ describe('AccountsService', () => {
 
     expect(workspacesService.assertCanWrite.mock.calls).toEqual([['user-1', 'workspace-1']]);
     const [[accountCreatePayload]] = tx.account.create.mock.calls as [[AccountCreatePayload]];
-    const [[transactionCreatePayload]] = tx.transaction.create.mock
-      .calls as [[TransactionCreatePayload]];
+    const [[transactionCreatePayload]] = tx.transaction.create.mock.calls as [
+      [TransactionCreatePayload],
+    ];
 
     expect(accountCreatePayload).toMatchObject({
       data: {
@@ -157,8 +164,9 @@ describe('AccountsService', () => {
       initialBalance: -120,
     });
 
-    const [[transactionCreatePayload]] = tx.transaction.create.mock
-      .calls as [[TransactionCreatePayload]];
+    const [[transactionCreatePayload]] = tx.transaction.create.mock.calls as [
+      [TransactionCreatePayload],
+    ];
 
     expect(transactionCreatePayload.data.type).toBe(TransactionType.EXPENSE);
     expect(transactionCreatePayload.data.amount.toFixed(2)).toBe('120.00');
@@ -200,7 +208,7 @@ describe('AccountsService', () => {
         includeInTotal: false,
       },
     ]);
-    prisma.transaction.groupBy.mockResolvedValue([
+    prisma.transaction.groupBy.mockResolvedValueOnce([
       {
         accountId: 'account-1',
         type: TransactionType.INCOME,
@@ -219,8 +227,13 @@ describe('AccountsService', () => {
 
     await expect(service.getDashboardSummary('user-1', 'workspace-1')).resolves.toMatchObject({
       workspaceId: 'workspace-1',
+      currentBalance: '5000.00',
       totalIncluded: '5000.00',
       totalOverall: '8000.00',
+      expensesByCategory: [],
+      budgetStatus: {
+        hasBudget: false,
+      },
       accounts: [
         {
           id: 'account-1',
@@ -231,6 +244,77 @@ describe('AccountsService', () => {
           balance: '3000.00',
         },
       ],
+    });
+  });
+
+  it('summarizes dashboard expenses by category for the selected month', async () => {
+    prisma.account.findMany.mockResolvedValue([account]);
+    prisma.transaction.groupBy
+      .mockResolvedValueOnce([
+        {
+          accountId: 'account-1',
+          type: TransactionType.INCOME,
+          _sum: {
+            amount: new Prisma.Decimal(1000),
+          },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          categoryId: 'category-food',
+          _sum: {
+            amount: new Prisma.Decimal(250.75),
+          },
+        },
+        {
+          categoryId: 'category-home',
+          _sum: {
+            amount: new Prisma.Decimal(100),
+          },
+        },
+      ]);
+    prisma.category.findMany.mockResolvedValue([
+      {
+        id: 'category-food',
+        name: 'Alimentacao',
+        color: '#EF4444',
+      },
+      {
+        id: 'category-home',
+        name: 'Casa',
+        color: '#A855F7',
+      },
+    ]);
+
+    await expect(
+      service.getDashboardSummary('user-1', 'workspace-1', 7, 2026),
+    ).resolves.toMatchObject({
+      expensesByCategory: [
+        {
+          categoryId: 'category-food',
+          name: 'Alimentacao',
+          color: '#EF4444',
+          totalAmount: '250.75',
+        },
+        {
+          categoryId: 'category-home',
+          name: 'Casa',
+          color: '#A855F7',
+          totalAmount: '100.00',
+        },
+      ],
+    });
+
+    expect(prisma.transaction.groupBy.mock.calls[1][0]).toMatchObject({
+      by: ['categoryId'],
+      where: {
+        workspaceId: 'workspace-1',
+        type: TransactionType.EXPENSE,
+        occurredAt: {
+          gte: new Date('2026-07-01T00:00:00.000Z'),
+          lt: new Date('2026-08-01T00:00:00.000Z'),
+        },
+      },
     });
   });
 });
