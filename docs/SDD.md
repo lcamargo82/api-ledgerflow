@@ -23,8 +23,11 @@ Regras transversais:
 Status implementado:
 - `WorkspacesService` centraliza validação de membership e permissão de escrita.
 - `AccountsService` reutiliza essa validação para contas e dashboard.
+- `CategoriesService` reutiliza essa validação para gestão de categorias por workspace.
+- `TransactionsService` reutiliza essa validação para extrato e lançamentos manuais por workspace.
 - O saldo inicial é persistido por meio de uma `Transaction` com `origin = INITIAL_BALANCE`.
 - O catálogo de instituições é um JSON interno versionado e copiado para `dist` no build.
+- Swagger UI, OpenAPI JSON e ReDoc são gerados a partir dos decorators dos controllers e DTOs.
 
 ## Segurança
 - Proteção contra injeção e ataques comuns.

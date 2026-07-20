@@ -24,6 +24,8 @@ export function getSwaggerConfig(config: ConfigService) {
     .addTag('Institutions')
     .addTag('Accounts')
     .addTag('Dashboard')
+    .addTag('Categories')
+    .addTag('Transactions')
     .addTag('Health')
     .addTag('Users')
     .build();
