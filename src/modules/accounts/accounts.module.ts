@@ -10,5 +10,6 @@ import { DashboardController } from './dashboard.controller';
   imports: [PrismaModule, WorkspacesModule, InstitutionsModule],
   controllers: [AccountsController, DashboardController],
   providers: [AccountsService],
+  exports: [AccountsService],
 })
 export class AccountsModule {}
