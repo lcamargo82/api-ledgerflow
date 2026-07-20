@@ -241,12 +241,14 @@ pipeline {
                         ssh -i "${SSH_KEY}" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${REMOTE_USER}@${DEPLOY_HOST} "
                           set -eu
                           cd ${DEPLOY_PATH}
-                          for attempt in \$(seq 1 30); do
+                          attempt=1
+                          while [ "\${attempt}" -le 30 ]; do
                             if curl -fsS ${API_HEALTHCHECK_URL} > /tmp/api-ledgerflow-health.json; then
                               cat /tmp/api-ledgerflow-health.json
                               exit 0
                             fi
                             sleep 2
+                            attempt=\$((attempt + 1))
                           done
                           docker compose --env-file .env ${COMPOSE_FILES} logs --tail=120 api
                           exit 20
