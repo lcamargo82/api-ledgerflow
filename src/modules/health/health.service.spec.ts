@@ -24,4 +24,23 @@ describe('HealthService', () => {
 
     await expect(service.getReadiness()).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
+
+  it('throws service unavailable when database check times out', async () => {
+    jest.useFakeTimers();
+
+    const timeoutConfig = {
+      get: jest.fn((key: string, fallback?: number | string) =>
+        key === 'HEALTH_READINESS_TIMEOUT_MS' ? 10 : fallback,
+      ),
+    } as unknown as ConfigService;
+    const prisma = { $queryRaw: jest.fn().mockReturnValue(new Promise(() => undefined)) };
+    const service = new HealthService(timeoutConfig, prisma as never);
+    const readiness = service.getReadiness();
+
+    jest.advanceTimersByTime(10);
+
+    await expect(readiness).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    jest.useRealTimers();
+  });
 });
