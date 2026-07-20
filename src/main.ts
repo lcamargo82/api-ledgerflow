@@ -23,8 +23,10 @@ async function bootstrap() {
       contentSecurityPolicy: {
         directives: {
           connectSrc: ["'self'", 'https://cdn.redoc.ly'],
+          fontSrc: ["'self'", 'data:'],
           imgSrc: ["'self'", 'data:', 'https://cdn.redoc.ly'],
-          scriptSrc: ["'self'", 'https://cdn.redoc.ly'],
+          scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.redoc.ly'],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.redoc.ly'],
           workerSrc: ["'self'", 'blob:'],
         },
       },
