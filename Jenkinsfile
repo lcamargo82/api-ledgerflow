@@ -243,7 +243,7 @@ pipeline {
                             cd "${DEPLOY_PATH}"
                             attempt=1
                             while [ "${attempt}" -le 30 ]; do
-                              if curl -fsS --connect-timeout 2 --max-time 5 "${API_HEALTHCHECK_URL}" > /tmp/api-ledgerflow-health.json; then
+                              if docker compose --env-file .env ${COMPOSE_FILES} exec -T api node -e "const port = process.env.API_PORT || 3021; const timeout = setTimeout(() => process.exit(1), 5000); fetch('http://127.0.0.1:' + port + '/health/readiness').then(async response => { clearTimeout(timeout); const body = await response.text(); console.log(body); process.exit(response.ok ? 0 : 1); }).catch(() => process.exit(1));" > /tmp/api-ledgerflow-health.json; then
                                 cat /tmp/api-ledgerflow-health.json
                                 exit 0
                               fi
