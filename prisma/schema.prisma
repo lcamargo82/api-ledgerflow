@@ -74,6 +74,8 @@ model Category {
   workspaceId     String
   name            String
   type            CategoryType
+  color           String        @default("#64748B")
+  icon            String        @default("tag")
   isSystemDefault Boolean       @default(false)
   active          Boolean       @default(true)
   createdByUserId String

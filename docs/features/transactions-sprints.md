@@ -5,7 +5,7 @@ Entregar a gestão manual de receitas e despesas por workspace, mantendo saldos 
 
 Branch recomendada para implementação do MVP de receitas e despesas:
 - Base: `develop`
-- Branch: `feature/transactions-management`
+- Branch: `codex-docs-categories-transactions-sprints`
 
 Comandos sugeridos:
 ```bash
@@ -25,7 +25,7 @@ Legenda:
 
 ## Sprint 1: Fundação do Módulo de Transações
 
-Status: parcialmente implementada.
+Status: implementada.
 
 ### Objetivo
 Aproveitar o modelo existente de transações gênesis e criar o módulo público para lançamentos manuais.
@@ -36,119 +36,119 @@ Aproveitar o modelo existente de transações gênesis e criar o módulo públic
 - [x] Criar enum `TransactionOrigin` com `MANUAL` e `INITIAL_BALANCE`.
 - [x] Persistir valores como `Decimal(14,2)`.
 - [x] Relacionar transação com `workspaceId`, `accountId`, `categoryId` e autoria.
-- [ ] Criar `TransactionsModule`.
-- [ ] Criar `TransactionsController`.
-- [ ] Criar `TransactionsService`.
-- [ ] Registrar o módulo em `AppModule`.
-- [ ] Definir helpers de conversão decimal e serialização monetária seguindo o padrão de contas.
+- [x] Criar `TransactionsModule`.
+- [x] Criar `TransactionsController`.
+- [x] Criar `TransactionsService`.
+- [x] Registrar o módulo em `AppModule`.
+- [x] Definir helpers de conversão decimal e serialização monetária seguindo o padrão de contas.
 
 ### Critérios de Aceite
-- [ ] Módulo compila integrado ao app.
-- [ ] Service consegue usar `PrismaService` sem duplicar lógica crítica de workspace.
-- [ ] Transações existentes de saldo inicial continuam funcionando.
+- [x] Módulo compila integrado ao app.
+- [x] Service consegue usar `PrismaService` sem duplicar lógica crítica de workspace.
+- [x] Transações existentes de saldo inicial continuam funcionando.
 
 ## Sprint 2: Criação Manual de Receitas e Despesas
 
-Status: pendente.
+Status: implementada.
 
 ### Objetivo
 Permitir que usuários registrem entradas e saídas nas contas do workspace.
 
 ### Backlog
-- [ ] Criar `CreateTransactionDto`.
-- [ ] Validar `accountId`, `categoryId`, `type`, `amount`, `occurredAt` e `description`.
-- [ ] Implementar `POST /workspaces/:workspaceId/transactions`.
-- [ ] Validar membership e role de escrita.
-- [ ] Validar que a conta pertence ao `workspaceId`.
-- [ ] Validar que a categoria pertence ao `workspaceId`.
-- [ ] Validar compatibilidade entre `TransactionType` e `CategoryType`.
-- [ ] Definir `origin = MANUAL` no backend.
-- [ ] Permitir despesa que deixe saldo negativo.
-- [ ] Retornar valores monetários como string decimal.
-- [ ] Documentar endpoint no Swagger.
+- [x] Criar `CreateTransactionDto`.
+- [x] Validar `accountId`, `categoryId`, `type`, `amount`, `occurredAt` e `description`.
+- [x] Implementar `POST /workspaces/:workspaceId/transactions`.
+- [x] Validar membership e role de escrita.
+- [x] Validar que a conta pertence ao `workspaceId`.
+- [x] Validar que a categoria pertence ao `workspaceId`.
+- [x] Validar compatibilidade entre `TransactionType` e `CategoryType`.
+- [x] Definir `origin = MANUAL` no backend.
+- [x] Permitir despesa que deixe saldo negativo.
+- [x] Retornar valores monetários como string decimal.
+- [x] Documentar endpoint no Swagger.
 
 ### Critérios de Aceite
-- [ ] Receita válida aumenta o saldo calculado da conta.
-- [ ] Despesa válida diminui o saldo calculado da conta.
-- [ ] Despesa pode deixar saldo negativo.
-- [ ] Categoria incompatível retorna erro de validação.
-- [ ] Conta ou categoria de outro workspace não pode ser usada.
-- [ ] Usuário `VIEWER` não cria transação.
+- [x] Receita válida aumenta o saldo calculado da conta.
+- [x] Despesa válida diminui o saldo calculado da conta.
+- [x] Despesa pode deixar saldo negativo.
+- [x] Categoria incompatível retorna erro de validação.
+- [x] Conta ou categoria de outro workspace não pode ser usada.
+- [x] Usuário `VIEWER` não cria transação.
 
 ## Sprint 3: Extrato, Detalhe e Filtros
 
-Status: pendente.
+Status: implementada.
 
 ### Objetivo
 Fornecer listagem paginada para extrato e telas de histórico do aplicativo mobile.
 
 ### Backlog
-- [ ] Criar DTO de filtros de transação.
-- [ ] Implementar `GET /workspaces/:workspaceId/transactions`.
-- [ ] Implementar `GET /workspaces/:workspaceId/transactions/:transactionId`.
-- [ ] Suportar filtros por `accountId`, `categoryId`, `type`, `origin`, `startDate`, `endDate` e `search`.
-- [ ] Implementar paginação com limite máximo de `perPage`.
-- [ ] Ordenar por `occurredAt DESC` e `createdAt DESC`.
-- [ ] Incluir dados básicos de conta e categoria na resposta, se isso reduzir chamadas do app.
-- [ ] Documentar filtros no Swagger.
+- [x] Criar DTO de filtros de transação.
+- [x] Implementar `GET /workspaces/:workspaceId/transactions`.
+- [x] Implementar `GET /workspaces/:workspaceId/transactions/:transactionId`.
+- [x] Suportar filtros por `accountId`, `categoryId`, `type`, `origin`, `startDate`, `endDate` e `search`.
+- [x] Implementar paginação com limite máximo de `perPage`.
+- [x] Ordenar por `occurredAt DESC` e `createdAt DESC`.
+- [x] Incluir dados básicos de conta e categoria na resposta, se isso reduzir chamadas do app.
+- [x] Documentar filtros no Swagger.
 
 ### Critérios de Aceite
-- [ ] Usuário lista apenas transações dos workspaces aos quais pertence.
-- [ ] Paginação retorna metadados suficientes para o mobile.
-- [ ] Filtros principais funcionam isolados e combinados.
-- [ ] Detalhe retorna `404` para transação fora do workspace.
+- [x] Usuário lista apenas transações dos workspaces aos quais pertence.
+- [x] Paginação retorna metadados suficientes para o mobile.
+- [x] Filtros principais funcionam isolados e combinados.
+- [x] Detalhe retorna `404` para transação fora do workspace.
 
 ## Sprint 4: Edição e Remoção Segura
 
-Status: pendente.
+Status: implementada.
 
 ### Objetivo
 Permitir correção de lançamentos manuais preservando a consistência dos saldos derivados.
 
 ### Backlog
-- [ ] Criar `UpdateTransactionDto`.
-- [ ] Implementar `PATCH /workspaces/:workspaceId/transactions/:transactionId`.
-- [ ] Implementar `DELETE /workspaces/:workspaceId/transactions/:transactionId`.
-- [ ] Bloquear edição e remoção comum de `origin = INITIAL_BALANCE`.
-- [ ] Revalidar conta, categoria e compatibilidade de tipo em edições.
-- [ ] Garantir que o dashboard reflete alterações após edição.
-- [ ] Definir se `DELETE` remove fisicamente ou se cria base para estorno/soft-delete futuro.
-- [ ] Registrar `updatedByUserId` em alterações.
+- [x] Criar `UpdateTransactionDto`.
+- [x] Implementar `PATCH /workspaces/:workspaceId/transactions/:transactionId`.
+- [x] Implementar `DELETE /workspaces/:workspaceId/transactions/:transactionId`.
+- [x] Bloquear edição e remoção comum de `origin = INITIAL_BALANCE`.
+- [x] Revalidar conta, categoria e compatibilidade de tipo em edições.
+- [x] Garantir que o dashboard reflete alterações após edição.
+- [x] Definir se `DELETE` remove fisicamente ou se cria base para estorno/soft-delete futuro.
+- [x] Registrar `updatedByUserId` em alterações.
 
 ### Critérios de Aceite
-- [ ] Usuário com role de escrita edita transação manual válida.
-- [ ] Alteração de valor, tipo, conta ou categoria mantém saldo calculado correto.
-- [ ] Transação gênesis não é alterada pelos endpoints comuns.
-- [ ] Usuário `VIEWER` não edita nem remove.
-- [ ] Remoção de transação manual atualiza o extrato e dashboard.
+- [x] Usuário com role de escrita edita transação manual válida.
+- [x] Alteração de valor, tipo, conta ou categoria mantém saldo calculado correto.
+- [x] Transação gênesis não é alterada pelos endpoints comuns.
+- [x] Usuário `VIEWER` não edita nem remove.
+- [x] Remoção de transação manual atualiza o extrato e dashboard.
 
 ## Sprint 5: Testes, Swagger e Integração com Dashboard
 
-Status: pendente.
+Status: implementada.
 
 ### Objetivo
 Fechar a feature com cobertura suficiente para regras financeiras sensíveis.
 
 ### Backlog
-- [ ] Criar testes unitários de `TransactionsService`.
-- [ ] Cobrir criação de receita.
-- [ ] Cobrir criação de despesa com saldo positivo e negativo.
-- [ ] Cobrir categoria incompatível.
-- [ ] Cobrir conta/categoria de outro workspace.
-- [ ] Cobrir permissões por role.
-- [ ] Cobrir edição e remoção.
-- [ ] Cobrir proteção de `INITIAL_BALANCE`.
-- [ ] Ajustar ou ampliar testes de dashboard se necessário.
-- [ ] Adicionar `ApiTags('Transactions')`.
-- [ ] Adicionar exemplos de payload e resposta no Swagger.
-- [ ] Rodar validações finais.
+- [x] Criar testes unitários de `TransactionsService`.
+- [~] Cobrir criação de receita.
+- [x] Cobrir criação de despesa com saldo positivo e negativo.
+- [x] Cobrir categoria incompatível.
+- [x] Cobrir conta/categoria de outro workspace.
+- [x] Cobrir permissões por role.
+- [~] Cobrir edição e remoção.
+- [x] Cobrir proteção de `INITIAL_BALANCE`.
+- [x] Ajustar ou ampliar testes de dashboard se necessário.
+- [x] Adicionar `ApiTags('Transactions')`.
+- [x] Adicionar exemplos de payload e resposta no Swagger.
+- [x] Rodar validações finais.
 
 ### Critérios de Aceite
-- [ ] Testes relevantes passam.
-- [ ] `npm run lint` passa.
-- [ ] `npm run build` passa.
-- [ ] Dashboard segue consistente após operações de transação.
-- [ ] Swagger documenta todos os endpoints.
+- [x] Testes relevantes passam.
+- [x] `npm run lint` passa.
+- [x] `npm run build` passa.
+- [x] Dashboard segue consistente após operações de transação.
+- [x] Swagger documenta todos os endpoints.
 
 ## Sprint 6: Transferências entre Contas
 

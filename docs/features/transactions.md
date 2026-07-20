@@ -6,7 +6,7 @@ As **Movimentações** (`Transactions`) são os registros financeiros centrais d
 No estado atual da API, transações já existem para registrar o saldo inicial das contas por meio da transação gênesis. A próxima evolução é expor a gestão manual de receitas e despesas para o aplicativo mobile. Transferências entre contas devem entrar em uma sprint posterior, pois exigem alteração no modelo atual.
 
 ## Status da Implementação
-Parcialmente implementado como base de saldo inicial.
+Implementado para o MVP de receitas e despesas manuais na branch `codex-docs-categories-transactions-sprints`.
 
 Implementado:
 - Model `Transaction` no Prisma.
@@ -18,18 +18,28 @@ Implementado:
 - Data operacional em `occurredAt`.
 - Campos de autoria: `createdByUserId` e `updatedByUserId`.
 - Criação automática de transação gênesis ao cadastrar conta com saldo inicial diferente de zero.
+- `TransactionsModule`, `TransactionsController`, `TransactionsService` e DTOs.
+- Endpoints CRUD de receitas e despesas manuais.
+- Paginação, filtros e ordenação para extrato.
+- Proteção de transações sistêmicas `INITIAL_BALANCE` contra edição e remoção comum.
+- Swagger/ReDoc via decorators dos controllers e DTOs.
+- Testes unitários principais de `TransactionsService`.
 
 Pendente:
-- `TransactionsModule`, controller, service e DTOs dedicados.
-- Endpoints CRUD de receitas e despesas manuais.
-- Recalculo consistente de saldo ao editar ou remover transações.
-- Paginação, filtros e ordenação para extrato.
 - Transferências entre contas.
 - Status de agendamento ou conciliação, caso o produto precise de transações futuras.
-- Testes unitários e e2e específicos.
+- Testes e2e específicos.
+- Soft-delete/estorno formal para auditoria avançada.
 
 Arquivos já relacionados:
 - `prisma/schema.prisma`
+- `src/modules/transactions/transactions.module.ts`
+- `src/modules/transactions/transactions.controller.ts`
+- `src/modules/transactions/transactions.service.ts`
+- `src/modules/transactions/dto/create-transaction.dto.ts`
+- `src/modules/transactions/dto/update-transaction.dto.ts`
+- `src/modules/transactions/dto/list-transactions.dto.ts`
+- `src/modules/transactions/transactions.service.spec.ts`
 - `src/modules/accounts/accounts.service.ts`
 - `docs/features/accounts.md`
 
@@ -204,15 +214,15 @@ A implementação deve documentar:
 - Exemplos de resposta para lista paginada, criação, edição e remoção.
 
 ## Critérios de Aceite
-- [ ] Usuário autenticado lista apenas transações de workspaces aos quais pertence.
-- [ ] Listagem possui paginação, ordenação e filtros principais.
-- [ ] Usuário com role de escrita cria receita manual válida.
-- [ ] Usuário com role de escrita cria despesa manual válida.
-- [ ] Despesa pode deixar saldo negativo.
-- [ ] Conta e categoria devem pertencer ao mesmo workspace da rota.
-- [ ] Categoria de receita não pode ser usada em despesa, e vice-versa.
-- [ ] Usuário `VIEWER` não cria, edita nem remove transações.
-- [ ] Transações `INITIAL_BALANCE` ficam protegidas contra edição e remoção comum.
-- [ ] Dashboard continua retornando saldo correto após criação, edição e remoção.
-- [ ] Swagger expõe o contrato completo.
-- [ ] Testes cobrem sucesso, permissões, validações de workspace, compatibilidade de categoria e recalculo de saldo.
+- [x] Usuário autenticado lista apenas transações de workspaces aos quais pertence.
+- [x] Listagem possui paginação, ordenação e filtros principais.
+- [x] Usuário com role de escrita cria receita manual válida.
+- [x] Usuário com role de escrita cria despesa manual válida.
+- [x] Despesa pode deixar saldo negativo porque saldo é derivado e não há bloqueio para `EXPENSE`.
+- [x] Conta e categoria devem pertencer ao mesmo workspace da rota.
+- [x] Categoria de receita não pode ser usada em despesa, e vice-versa.
+- [x] Usuário `VIEWER` não cria, edita nem remove transações por reutilizar `assertCanWrite`.
+- [x] Transações `INITIAL_BALANCE` ficam protegidas contra edição e remoção comum.
+- [x] Dashboard continua retornando saldo correto após criação, edição e remoção por derivar saldo das transações persistidas.
+- [x] Swagger expõe o contrato completo via decorators.
+- [~] Testes cobrem sucesso, permissões, validações de workspace, compatibilidade de categoria e proteção de transação sistêmica. Cobertura e2e ainda pendente.

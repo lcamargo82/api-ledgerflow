@@ -6,7 +6,7 @@ Uma **Categoria** classifica movimentações financeiras de um workspace, permit
 No LedgerFlow, categorias pertencem obrigatoriamente a um `workspaceId`. Isso garante que um workspace pessoal, de negócio ou compartilhado mantenha sua própria árvore de classificação sem vazar regras, nomes ou padrões para outros ambientes.
 
 ## Status da Implementação
-Parcialmente implementado na base de onboarding.
+Implementado para o MVP de gestão de categorias na branch `codex-docs-categories-transactions-sprints`.
 
 Implementado:
 - Model `Category` no Prisma.
@@ -14,17 +14,27 @@ Implementado:
 - Seed de categorias padrão na criação de workspaces.
 - Categoria sistêmica `Ajuste Inicial de Saldo` para transações gênesis.
 - Unicidade por `workspaceId`, `name` e `type`.
+- Campos visuais `color` e `icon`.
 - Campos de autoria básica: `createdByUserId` e `updatedByUserId`.
+- `CategoriesModule`, `CategoriesController`, `CategoriesService` e DTOs.
+- Endpoints de listagem, detalhe, criação, edição e remoção/arquivamento.
+- Swagger/ReDoc via decorators dos controllers e DTOs.
+- Testes unitários principais de `CategoriesService`.
 
 Pendente:
-- Endpoints públicos de gestão de categorias.
-- DTOs, service e controller dedicados.
-- Campos visuais `color` e `icon`, caso o frontend dependa deles para exibição.
-- Regras formais para categoria sistêmica não editável.
-- Testes unitários e e2e específicos de categorias.
+- Testes e2e específicos de categorias.
+- Decisão futura sobre permitir renomear categorias sistêmicas que não sejam `ADJUSTMENT`.
 
 Arquivos já relacionados:
 - `prisma/schema.prisma`
+- `prisma/migrations/20260719120000_category_visual_fields/migration.sql`
+- `src/modules/categories/categories.module.ts`
+- `src/modules/categories/categories.controller.ts`
+- `src/modules/categories/categories.service.ts`
+- `src/modules/categories/dto/create-category.dto.ts`
+- `src/modules/categories/dto/update-category.dto.ts`
+- `src/modules/categories/dto/list-categories.dto.ts`
+- `src/modules/categories/categories.service.spec.ts`
 - `src/modules/workspaces/workspaces.service.ts`
 - `docs/features/workspaces.md`
 - `docs/features/onboarding-sprints.md`
@@ -179,13 +189,13 @@ A implementação deve documentar:
 - Exemplos de respostas para lista, criação, edição e arquivamento.
 
 ## Critérios de Aceite
-- [ ] Usuário autenticado lista apenas categorias de workspaces aos quais pertence.
-- [ ] Filtros por `type`, `active`, `includeSystem` e `search` funcionam corretamente.
-- [ ] Usuário com role de escrita cria categoria válida.
-- [ ] Usuário `VIEWER` não cria, edita nem arquiva categoria.
-- [ ] Nomes duplicados no mesmo workspace e tipo são recusados.
-- [ ] Categorias com transações vinculadas não são excluídas fisicamente.
-- [ ] Categoria arquivada permanece disponível no histórico de transações.
-- [ ] Categorias sistêmicas de ajuste não podem ser removidas por endpoints comuns.
-- [ ] Swagger expõe o contrato completo.
-- [ ] Testes cobrem sucesso, permissão, duplicidade, arquivamento e proteção de categorias sistêmicas.
+- [x] Usuário autenticado lista apenas categorias de workspaces aos quais pertence.
+- [x] Filtros por `type`, `active`, `includeSystem` e `search` funcionam corretamente.
+- [x] Usuário com role de escrita cria categoria válida.
+- [x] Usuário `VIEWER` não cria, edita nem arquiva categoria por reutilizar `assertCanWrite`.
+- [x] Nomes duplicados no mesmo workspace e tipo são recusados.
+- [x] Categorias com transações vinculadas não são excluídas fisicamente.
+- [x] Categoria arquivada permanece disponível no histórico de transações.
+- [x] Categorias sistêmicas de ajuste não podem ser removidas por endpoints comuns.
+- [x] Swagger expõe o contrato completo via decorators.
+- [~] Testes cobrem sucesso, permissão, duplicidade, arquivamento e proteção de categorias sistêmicas. Cobertura e2e ainda pendente.

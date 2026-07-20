@@ -18,9 +18,9 @@ O LedgerFlow é um aplicativo mobile Android voltado para o controle e gestão f
 - Autenticação e Perfil: implementado.
 - Onboarding Financeiro: implementado com `GET /auth/me`, `GET /workspaces` e `POST /workspaces/onboarding`.
 - Contas (Cofres): implementado com catálogo interno de instituições, contas por workspace, saldo inicial auditável e resumo inicial de dashboard.
-- Categorias: parcialmente implementadas como seed de onboarding; endpoints de gestão e campos visuais estão planejados em `docs/features/categories.md` e `docs/features/categories-sprints.md`.
-- Movimentações: parcialmente implementadas para saldo inicial; CRUD de receitas/despesas e transferências estão planejados em `docs/features/transactions.md` e `docs/features/transactions-sprints.md`.
-- Gestão Financeira completa: parcialmente preparada. O modelo de transações existe para suportar saldo inicial, mas endpoints gerais de receitas/despesas, transferências e relatórios ainda não foram implementados.
+- Categorias: implementadas no MVP com seed de onboarding, campos visuais, listagem, detalhe, criação, edição e remoção/arquivamento por workspace.
+- Movimentações: implementadas no MVP para receitas e despesas manuais, com extrato paginado, filtros, detalhe, edição e remoção protegendo transações sistêmicas de saldo inicial.
+- Gestão Financeira completa: parcialmente preparada. Transferências entre contas, relatórios avançados e recorrências ainda não foram implementados.
 
 ## Requisitos Não Funcionais
 - **Segurança**: Proteção rigorosa de dados. Nenhuma credencial, token ou variável de ambiente deve ser exposta no código ou retornos da API.
