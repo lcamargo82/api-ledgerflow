@@ -243,7 +243,7 @@ pipeline {
                             cd "${DEPLOY_PATH}"
                             attempt=1
                             while [ "${attempt}" -le 30 ]; do
-                              if curl -fsS "${API_HEALTHCHECK_URL}" > /tmp/api-ledgerflow-health.json; then
+                              if curl -fsS --connect-timeout 2 --max-time 5 "${API_HEALTHCHECK_URL}" > /tmp/api-ledgerflow-health.json; then
                                 cat /tmp/api-ledgerflow-health.json
                                 exit 0
                               fi
