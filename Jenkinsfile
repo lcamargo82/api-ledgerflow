@@ -240,7 +240,8 @@ pipeline {
                         REMOTE_USER="${SSH_USER:-${DEPLOY_USER}}"
                         ssh -i "${SSH_KEY}" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${REMOTE_USER}@${DEPLOY_HOST} "
                           set -eu
-                          for attempt in $(seq 1 30); do
+                          cd ${DEPLOY_PATH}
+                          for attempt in \$(seq 1 30); do
                             if curl -fsS ${API_HEALTHCHECK_URL} > /tmp/api-ledgerflow-health.json; then
                               cat /tmp/api-ledgerflow-health.json
                               exit 0
