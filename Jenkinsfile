@@ -238,21 +238,21 @@ pipeline {
                     sh '''
                         set -eu
                         REMOTE_USER="${SSH_USER:-${DEPLOY_USER}}"
-                        ssh -i "${SSH_KEY}" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${REMOTE_USER}@${DEPLOY_HOST} "
-                          set -eu
-                          cd ${DEPLOY_PATH}
-                          attempt=1
-                          while [ "\${attempt}" -le 30 ]; do
-                            if curl -fsS ${API_HEALTHCHECK_URL} > /tmp/api-ledgerflow-health.json; then
-                              cat /tmp/api-ledgerflow-health.json
-                              exit 0
-                            fi
-                            sleep 2
-                            attempt=\$((attempt + 1))
-                          done
-                          docker compose --env-file .env ${COMPOSE_FILES} logs --tail=120 api
-                          exit 20
-                        "
+                        ssh -i "${SSH_KEY}" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new ${REMOTE_USER}@${DEPLOY_HOST} "DEPLOY_PATH='${DEPLOY_PATH}' API_HEALTHCHECK_URL='${API_HEALTHCHECK_URL}' COMPOSE_FILES='${COMPOSE_FILES}' sh -s" <<'REMOTE_VERIFY'
+                            set -eu
+                            cd "${DEPLOY_PATH}"
+                            attempt=1
+                            while [ "${attempt}" -le 30 ]; do
+                              if curl -fsS "${API_HEALTHCHECK_URL}" > /tmp/api-ledgerflow-health.json; then
+                                cat /tmp/api-ledgerflow-health.json
+                                exit 0
+                              fi
+                              sleep 2
+                              attempt=$((attempt + 1))
+                            done
+                            docker compose --env-file .env ${COMPOSE_FILES} logs --tail=120 api
+                            exit 20
+REMOTE_VERIFY
                     '''
                 }
             }
