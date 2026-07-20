@@ -18,7 +18,18 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          connectSrc: ["'self'", 'https://cdn.redoc.ly'],
+          imgSrc: ["'self'", 'data:', 'https://cdn.redoc.ly'],
+          scriptSrc: ["'self'", 'https://cdn.redoc.ly'],
+          workerSrc: ["'self'", 'blob:'],
+        },
+      },
+    }),
+  );
   app.use(compression());
   app.enableCors({
     origin: parseCorsOrigins(config.get<string>('CORS_ORIGINS', '*')),

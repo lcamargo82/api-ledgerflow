@@ -20,6 +20,13 @@ export function getSwaggerConfig(config: ConfigService) {
     )
     .addTag('App')
     .addTag('Auth')
+    .addTag('Workspaces')
+    .addTag('Institutions')
+    .addTag('Accounts')
+    .addTag('Dashboard')
+    .addTag('Categories')
+    .addTag('Transactions')
     .addTag('Health')
+    .addTag('Users')
     .build();
 }

@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json --incremental false",
+    "build": "tsc -p tsconfig.build.json --incremental false && mkdir -p dist/modules/institutions/data && cp src/modules/institutions/data/*.json dist/modules/institutions/data/",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"prisma/**/*.ts\"",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
