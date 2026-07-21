@@ -57,7 +57,7 @@ export class TransactionsController {
   @ApiParam({ name: 'workspaceId', example: 'workspace-id' })
   @ApiQuery({ name: 'accountId', required: false, example: 'account-id' })
   @ApiQuery({ name: 'categoryId', required: false, example: 'category-id' })
-  @ApiQuery({ name: 'type', required: false, enum: ['INCOME', 'EXPENSE'] })
+  @ApiQuery({ name: 'type', required: false, enum: ['INCOME', 'EXPENSE', 'TRANSFER'] })
   @ApiQuery({ name: 'origin', required: false, enum: ['MANUAL', 'INITIAL_BALANCE'] })
   @ApiQuery({ name: 'startDate', required: false, example: '2026-07-01' })
   @ApiQuery({ name: 'endDate', required: false, example: '2026-07-31' })
@@ -99,7 +99,7 @@ export class TransactionsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Cria uma receita ou despesa manual' })
+  @ApiOperation({ summary: 'Cria uma receita, despesa ou transferencia manual' })
   @ApiParam({ name: 'workspaceId', example: 'workspace-id' })
   @ApiBadRequestResponse({ description: 'Payload invalido, conta ou categoria incompativel' })
   @ApiNotFoundResponse({ description: 'Workspace nao encontrado ou sem permissao de escrita' })
@@ -110,6 +110,7 @@ export class TransactionsController {
         workspaceId: 'workspace-id',
         accountId: 'account-id',
         categoryId: 'category-id',
+        destinationAccountId: null,
         type: 'EXPENSE',
         origin: 'MANUAL',
         amount: '150.50',

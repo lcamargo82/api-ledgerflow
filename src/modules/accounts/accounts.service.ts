@@ -288,37 +288,67 @@ export class AccountsService {
   }
 
   private async getBalances(workspaceId: string, accountIds?: string[]) {
-    const groupedTransactions = await this.prisma.transaction.groupBy({
-      by: ['accountId', 'type'],
+    const groupedTransactions = await this.prisma.transaction.findMany({
       where: {
         workspaceId,
         ...(accountIds
           ? {
-              accountId: {
-                in: accountIds,
-              },
+              OR: [
+                {
+                  accountId: {
+                    in: accountIds,
+                  },
+                },
+                {
+                  destinationAccountId: {
+                    in: accountIds,
+                  },
+                },
+              ],
             }
           : {}),
       },
-      _sum: {
+      select: {
+        accountId: true,
+        destinationAccountId: true,
+        type: true,
         amount: true,
       },
     });
 
     const balances = new Map<string, Prisma.Decimal>();
 
-    for (const group of groupedTransactions) {
-      const amount = group._sum.amount ?? new Prisma.Decimal(0);
-      const currentBalance = balances.get(group.accountId) ?? new Prisma.Decimal(0);
-      const nextBalance =
-        group.type === TransactionType.EXPENSE
-          ? currentBalance.minus(amount)
-          : currentBalance.plus(amount);
+    for (const transaction of groupedTransactions) {
+      this.applyBalanceImpact(balances, transaction.accountId, transaction.amount, transaction.type);
 
-      balances.set(group.accountId, nextBalance);
+      if (
+        transaction.type === TransactionType.TRANSFER &&
+        transaction.destinationAccountId &&
+        (!accountIds || accountIds.includes(transaction.destinationAccountId))
+      ) {
+        const currentBalance =
+          balances.get(transaction.destinationAccountId) ?? new Prisma.Decimal(0);
+        balances.set(transaction.destinationAccountId, currentBalance.plus(transaction.amount));
+      }
     }
 
     return balances;
+  }
+
+  private applyBalanceImpact(
+    balances: Map<string, Prisma.Decimal>,
+    accountId: string,
+    amount: Prisma.Decimal,
+    transactionType: TransactionType,
+  ) {
+    const currentBalance = balances.get(accountId) ?? new Prisma.Decimal(0);
+
+    if (transactionType === TransactionType.EXPENSE || transactionType === TransactionType.TRANSFER) {
+      balances.set(accountId, currentBalance.minus(amount));
+      return;
+    }
+
+    balances.set(accountId, currentBalance.plus(amount));
   }
 
   private async findOrCreateInitialBalanceCategory(

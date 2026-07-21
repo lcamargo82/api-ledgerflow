@@ -21,6 +21,13 @@ type TransactionWithRelations = Transaction & {
     color: string;
     icon: string;
   };
+  destinationAccount?: {
+    id: string;
+    name: string;
+    type: string;
+    color: string;
+    icon: string;
+  } | null;
   category?: {
     id: string;
     name: string;
@@ -74,14 +81,21 @@ export class TransactionsService {
 
   async create(userId: string, workspaceId: string, dto: CreateTransactionDto) {
     await this.workspacesService.assertCanWrite(userId, workspaceId);
-    await this.assertAccountBelongsToWorkspace(workspaceId, dto.accountId);
-    await this.assertCategoryMatchesTransaction(workspaceId, dto.categoryId, dto.type);
+    await this.validateTransactionInput(workspaceId, {
+      accountId: dto.accountId,
+      destinationAccountId: dto.destinationAccountId,
+      categoryId: dto.categoryId,
+      type: dto.type,
+      amount: new Prisma.Decimal(dto.amount),
+    });
 
     const transaction = await this.prisma.transaction.create({
       data: {
         workspaceId,
         accountId: dto.accountId,
-        categoryId: dto.categoryId,
+        destinationAccountId:
+          dto.type === TransactionType.TRANSFER ? dto.destinationAccountId : null,
+        categoryId: dto.type === TransactionType.TRANSFER ? null : dto.categoryId,
         type: dto.type,
         origin: TransactionOrigin.MANUAL,
         amount: new Prisma.Decimal(dto.amount),
@@ -147,16 +161,31 @@ export class TransactionsService {
     this.assertManualTransaction(existingTransaction);
 
     const nextAccountId = dto.accountId ?? existingTransaction.accountId;
-    const nextCategoryId = dto.categoryId ?? existingTransaction.categoryId;
     const nextType = dto.type ?? existingTransaction.type;
+    const nextDestinationAccountId =
+      dto.destinationAccountId === undefined
+        ? existingTransaction.destinationAccountId
+        : dto.destinationAccountId;
+    const nextCategoryId =
+      nextType === TransactionType.TRANSFER
+        ? null
+        : dto.categoryId === undefined
+          ? existingTransaction.categoryId
+          : dto.categoryId;
+    const nextAmount =
+      dto.amount === undefined ? existingTransaction.amount : new Prisma.Decimal(dto.amount);
 
-    await this.assertAccountBelongsToWorkspace(workspaceId, nextAccountId);
-
-    if (!nextCategoryId) {
-      throw new BadRequestException('Category is required for manual transactions');
-    }
-
-    await this.assertCategoryMatchesTransaction(workspaceId, nextCategoryId, nextType);
+    await this.validateTransactionInput(
+      workspaceId,
+      {
+        accountId: nextAccountId,
+        destinationAccountId: nextDestinationAccountId,
+        categoryId: nextCategoryId,
+        type: nextType,
+        amount: nextAmount,
+      },
+      existingTransaction.id,
+    );
 
     const transaction = await this.prisma.transaction.update({
       where: {
@@ -164,7 +193,9 @@ export class TransactionsService {
       },
       data: {
         accountId: dto.accountId,
-        categoryId: dto.categoryId,
+        destinationAccountId:
+          nextType === TransactionType.TRANSFER ? nextDestinationAccountId : null,
+        categoryId: nextType === TransactionType.TRANSFER ? null : dto.categoryId,
         type: dto.type,
         amount: dto.amount === undefined ? undefined : new Prisma.Decimal(dto.amount),
         occurredAt: dto.occurredAt ? new Date(dto.occurredAt) : undefined,
@@ -200,7 +231,11 @@ export class TransactionsService {
   ): Prisma.TransactionWhereInput {
     return {
       workspaceId,
-      accountId: filters.accountId,
+      ...(filters.accountId
+        ? {
+            OR: [{ accountId: filters.accountId }, { destinationAccountId: filters.accountId }],
+          }
+        : {}),
       categoryId: filters.categoryId,
       type: filters.type,
       origin: filters.origin,
@@ -282,6 +317,104 @@ export class TransactionsService {
     }
   }
 
+  private async validateTransactionInput(
+    workspaceId: string,
+    input: {
+      accountId: string;
+      destinationAccountId?: string | null;
+      categoryId?: string | null;
+      type: TransactionType;
+      amount: Prisma.Decimal;
+    },
+    ignoredTransactionId?: string,
+  ) {
+    await this.assertAccountBelongsToWorkspace(workspaceId, input.accountId);
+
+    if (input.type === TransactionType.TRANSFER) {
+      if (!input.destinationAccountId) {
+        throw new BadRequestException('Destination account is required for transfers');
+      }
+
+      if (input.destinationAccountId === input.accountId) {
+        throw new BadRequestException('Origin and destination accounts must be different');
+      }
+
+      await this.assertAccountBelongsToWorkspace(workspaceId, input.destinationAccountId);
+      await this.assertSufficientBalanceForTransfer(
+        workspaceId,
+        input.accountId,
+        input.amount,
+        ignoredTransactionId,
+      );
+      return;
+    }
+
+    if (!input.categoryId) {
+      throw new BadRequestException('Category is required for manual transactions');
+    }
+
+    if (input.destinationAccountId) {
+      throw new BadRequestException('Destination account is allowed only for transfers');
+    }
+
+    await this.assertCategoryMatchesTransaction(workspaceId, input.categoryId, input.type);
+  }
+
+  private async assertSufficientBalanceForTransfer(
+    workspaceId: string,
+    accountId: string,
+    amount: Prisma.Decimal,
+    ignoredTransactionId?: string,
+  ) {
+    const balance = await this.getAccountBalance(workspaceId, accountId, ignoredTransactionId);
+
+    if (balance.lessThan(amount)) {
+      throw new BadRequestException('Insufficient balance for transfer');
+    }
+  }
+
+  private async getAccountBalance(
+    workspaceId: string,
+    accountId: string,
+    ignoredTransactionId?: string,
+  ) {
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        workspaceId,
+        ...(ignoredTransactionId ? { id: { not: ignoredTransactionId } } : {}),
+        OR: [{ accountId }, { destinationAccountId: accountId }],
+      },
+      select: {
+        accountId: true,
+        destinationAccountId: true,
+        type: true,
+        amount: true,
+      },
+    });
+
+    return transactions.reduce((balance, transaction) => {
+      if (transaction.type === TransactionType.INCOME && transaction.accountId === accountId) {
+        return balance.plus(transaction.amount);
+      }
+
+      if (transaction.type === TransactionType.EXPENSE && transaction.accountId === accountId) {
+        return balance.minus(transaction.amount);
+      }
+
+      if (transaction.type === TransactionType.TRANSFER) {
+        if (transaction.accountId === accountId) {
+          return balance.minus(transaction.amount);
+        }
+
+        if (transaction.destinationAccountId === accountId) {
+          return balance.plus(transaction.amount);
+        }
+      }
+
+      return balance;
+    }, new Prisma.Decimal(0));
+  }
+
   private async assertCategoryMatchesTransaction(
     workspaceId: string,
     categoryId: string,
@@ -319,6 +452,15 @@ export class TransactionsService {
   private getInclude() {
     return {
       account: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          color: true,
+          icon: true,
+        },
+      },
+      destinationAccount: {
         select: {
           id: true,
           name: true,

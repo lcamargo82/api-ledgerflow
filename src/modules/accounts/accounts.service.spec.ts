@@ -24,6 +24,14 @@ type TransactionCreatePayload = {
   };
 };
 
+type TransactionGroupByPayload = {
+  by: string[];
+  where: {
+    workspaceId: string;
+    type: TransactionType;
+  };
+};
+
 describe('AccountsService', () => {
   const now = new Date('2026-07-18T12:00:00.000Z');
   const account = {
@@ -53,6 +61,7 @@ describe('AccountsService', () => {
     };
     transaction: {
       groupBy: jest.Mock;
+      findMany: jest.Mock;
     };
     category: {
       findMany: jest.Mock;
@@ -97,6 +106,7 @@ describe('AccountsService', () => {
       },
       transaction: {
         groupBy: jest.fn().mockResolvedValue([]),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       category: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -208,20 +218,18 @@ describe('AccountsService', () => {
         includeInTotal: false,
       },
     ]);
-    prisma.transaction.groupBy.mockResolvedValueOnce([
+    prisma.transaction.findMany.mockResolvedValueOnce([
       {
         accountId: 'account-1',
+        destinationAccountId: null,
         type: TransactionType.INCOME,
-        _sum: {
-          amount: new Prisma.Decimal(5000),
-        },
+        amount: new Prisma.Decimal(5000),
       },
       {
         accountId: 'account-2',
+        destinationAccountId: null,
         type: TransactionType.INCOME,
-        _sum: {
-          amount: new Prisma.Decimal(3000),
-        },
+        amount: new Prisma.Decimal(3000),
       },
     ]);
 
@@ -249,17 +257,15 @@ describe('AccountsService', () => {
 
   it('summarizes dashboard expenses by category for the selected month', async () => {
     prisma.account.findMany.mockResolvedValue([account]);
-    prisma.transaction.groupBy
-      .mockResolvedValueOnce([
-        {
-          accountId: 'account-1',
-          type: TransactionType.INCOME,
-          _sum: {
-            amount: new Prisma.Decimal(1000),
-          },
-        },
-      ])
-      .mockResolvedValueOnce([
+    prisma.transaction.findMany.mockResolvedValueOnce([
+      {
+        accountId: 'account-1',
+        destinationAccountId: null,
+        type: TransactionType.INCOME,
+        amount: new Prisma.Decimal(1000),
+      },
+    ]);
+    prisma.transaction.groupBy.mockResolvedValueOnce([
         {
           categoryId: 'category-food',
           _sum: {
@@ -305,7 +311,11 @@ describe('AccountsService', () => {
       ],
     });
 
-    expect(prisma.transaction.groupBy.mock.calls[1][0]).toMatchObject({
+    const [[expensesGroupByPayload]] = prisma.transaction.groupBy.mock.calls as [
+      [TransactionGroupByPayload],
+    ];
+
+    expect(expensesGroupByPayload).toMatchObject({
       by: ['categoryId'],
       where: {
         workspaceId: 'workspace-1',
@@ -316,5 +326,41 @@ describe('AccountsService', () => {
         },
       },
     });
+  });
+
+  it('includes incoming and outgoing transfers in account balances', async () => {
+    prisma.account.findMany.mockResolvedValue([
+      account,
+      {
+        ...account,
+        id: 'account-2',
+        name: 'Reserva',
+      },
+    ]);
+    prisma.transaction.findMany.mockResolvedValueOnce([
+      {
+        accountId: 'account-1',
+        destinationAccountId: null,
+        type: TransactionType.INCOME,
+        amount: new Prisma.Decimal(1000),
+      },
+      {
+        accountId: 'account-1',
+        destinationAccountId: 'account-2',
+        type: TransactionType.TRANSFER,
+        amount: new Prisma.Decimal(250),
+      },
+    ]);
+
+    await expect(service.list('user-1', 'workspace-1')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'account-1',
+        balance: '750.00',
+      }),
+      expect.objectContaining({
+        id: 'account-2',
+        balance: '250.00',
+      }),
+    ]);
   });
 });

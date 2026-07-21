@@ -18,6 +18,14 @@ export class UpdateTransactionDto {
   @IsUUID()
   accountId?: string;
 
+  @ApiPropertyOptional({
+    example: 'destination-account-id',
+    description: 'Obrigatorio quando type = TRANSFER',
+  })
+  @IsOptional()
+  @IsUUID()
+  destinationAccountId?: string;
+
   @ApiPropertyOptional({ example: 'category-id' })
   @IsOptional()
   @IsUUID()
@@ -46,4 +54,3 @@ export class UpdateTransactionDto {
   @MaxLength(160)
   description?: string;
 }
-

@@ -1,9 +1,10 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TransactionType } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
   IsNumber,
+  IsOptional,
   IsPositive,
   IsString,
   IsUUID,
@@ -16,9 +17,21 @@ export class CreateTransactionDto {
   @IsUUID()
   accountId!: string;
 
-  @ApiProperty({ example: 'category-id' })
+  @ApiPropertyOptional({
+    example: 'destination-account-id',
+    description: 'Obrigatorio quando type = TRANSFER',
+  })
+  @IsOptional()
   @IsUUID()
-  categoryId!: string;
+  destinationAccountId?: string;
+
+  @ApiPropertyOptional({
+    example: 'category-id',
+    description: 'Obrigatorio para INCOME e EXPENSE; nao usado em TRANSFER',
+  })
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
 
   @ApiProperty({ enum: TransactionType, example: TransactionType.EXPENSE })
   @IsEnum(TransactionType)
@@ -39,4 +52,3 @@ export class CreateTransactionDto {
   @MaxLength(160)
   description!: string;
 }
-
