@@ -151,6 +151,10 @@ Preparar o app para uso por mais de uma pessoa no mesmo workspace, sem ainda dep
 - [x] Lista de membros retorna apenas para usuários membros do workspace.
 - [~] Testes cobrem role de escrita. Cobertura específica de `VIEWER` e listagem de membros ainda pendente.
 
+Evolução dedicada:
+- Spec: `docs/features/workspace-collaboration.md`
+- Sprints: `docs/features/workspace-collaboration-sprints.md`
+
 ## Ordem Recomendada
 1. Sprint 1: Workspaces e Membership.
 2. Sprint 2: Onboarding e Categorias.

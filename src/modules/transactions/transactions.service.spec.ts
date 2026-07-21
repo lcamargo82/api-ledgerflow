@@ -18,11 +18,19 @@ type TransactionCreatePayload = {
   data: {
     workspaceId: string;
     accountId: string;
-    categoryId: string;
+    destinationAccountId?: string | null;
+    categoryId?: string | null;
     type: TransactionType;
     origin: TransactionOrigin;
     description: string;
     createdByUserId: string;
+  };
+};
+
+type TransactionGroupByPayload = {
+  by: string[];
+  where: {
+    workspaceId: string;
   };
 };
 
@@ -32,6 +40,7 @@ describe('TransactionsService', () => {
     id: 'transaction-1',
     workspaceId: 'workspace-1',
     accountId: 'account-1',
+    destinationAccountId: null,
     categoryId: 'category-1',
     type: TransactionType.EXPENSE,
     origin: TransactionOrigin.MANUAL,
@@ -49,6 +58,7 @@ describe('TransactionsService', () => {
       color: '#7C3AED',
       icon: 'bank',
     },
+    destinationAccount: null,
     category: {
       id: 'category-1',
       name: 'Alimentacao',
@@ -149,6 +159,90 @@ describe('TransactionsService', () => {
     expect(result.amount).toBe('150.50');
   });
 
+  it('creates a transfer when the origin account has enough balance', async () => {
+    const transfer = {
+      ...transaction,
+      id: 'transaction-transfer',
+      destinationAccountId: 'account-2',
+      categoryId: null,
+      type: TransactionType.TRANSFER,
+      amount: new Prisma.Decimal(250),
+      destinationAccount: {
+        id: 'account-2',
+        name: 'Reserva',
+        type: 'SAVINGS',
+        color: '#16A34A',
+        icon: 'piggy-bank',
+      },
+      category: null,
+    };
+    prisma.transaction.findMany.mockResolvedValueOnce([
+      {
+        accountId: 'account-1',
+        destinationAccountId: null,
+        type: TransactionType.INCOME,
+        amount: new Prisma.Decimal(1000),
+      },
+    ]);
+    prisma.transaction.create.mockResolvedValue(transfer);
+
+    const result = await service.create('user-1', 'workspace-1', {
+      accountId: 'account-1',
+      destinationAccountId: 'account-2',
+      type: TransactionType.TRANSFER,
+      amount: 250,
+      occurredAt: now.toISOString(),
+      description: 'Reserva do mes',
+    });
+
+    const [[transactionCreatePayload]] = prisma.transaction.create.mock
+      .calls as PrismaCall<TransactionCreatePayload>;
+    expect(transactionCreatePayload).toMatchObject({
+      data: {
+        workspaceId: 'workspace-1',
+        accountId: 'account-1',
+        destinationAccountId: 'account-2',
+        categoryId: null,
+        type: TransactionType.TRANSFER,
+        origin: TransactionOrigin.MANUAL,
+        description: 'Reserva do mes',
+        createdByUserId: 'user-1',
+      },
+    });
+    expect(prisma.category.findFirst.mock.calls).toHaveLength(0);
+    expect(result).toMatchObject({
+      id: 'transaction-transfer',
+      amount: '250.00',
+      destinationAccount: {
+        id: 'account-2',
+      },
+      category: null,
+    });
+  });
+
+  it('rejects transfers with insufficient origin balance', async () => {
+    prisma.transaction.findMany.mockResolvedValueOnce([
+      {
+        accountId: 'account-1',
+        destinationAccountId: null,
+        type: TransactionType.INCOME,
+        amount: new Prisma.Decimal(100),
+      },
+    ]);
+
+    await expect(
+      service.create('user-1', 'workspace-1', {
+        accountId: 'account-1',
+        destinationAccountId: 'account-2',
+        type: TransactionType.TRANSFER,
+        amount: 250,
+        occurredAt: now.toISOString(),
+        description: 'Reserva do mes',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.transaction.create.mock.calls).toHaveLength(0);
+  });
+
   it('rejects incompatible category type', async () => {
     prisma.category.findFirst.mockResolvedValue({ type: CategoryType.INCOME });
 
@@ -206,7 +300,11 @@ describe('TransactionsService', () => {
 
     expect(workspacesService.assertCanRead.mock.calls).toContainEqual(['user-1', 'workspace-1']);
     expect(accountsService.getCurrentBalance.mock.calls).toEqual([['user-1', 'workspace-1']]);
-    expect(prisma.transaction.groupBy.mock.calls[0][0]).toMatchObject({
+    const [[monthlyGroupByPayload]] = prisma.transaction.groupBy.mock.calls as [
+      [TransactionGroupByPayload],
+    ];
+
+    expect(monthlyGroupByPayload).toMatchObject({
       by: ['type'],
       where: {
         workspaceId: 'workspace-1',

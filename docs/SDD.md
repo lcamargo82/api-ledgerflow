@@ -29,6 +29,73 @@ Status implementado:
 - O catálogo de instituições é um JSON interno versionado e copiado para `dist` no build.
 - Swagger UI, OpenAPI JSON e ReDoc são gerados a partir dos decorators dos controllers e DTOs.
 
+## Injeções de Design Implementadas e Evoluções Futuras
+
+### Transferência entre Contas
+Transferências entre contas devem ser implementadas como evolução explícita do módulo de transações, não como duas transações manuais independentes de receita e despesa. A operação representa movimentação interna de saldo e precisa preservar relatórios financeiros.
+
+Estado implementado:
+- `TransactionType` possui `INCOME`, `EXPENSE` e `TRANSFER`.
+- `Transaction` possui `accountId` como origem e `destinationAccountId` como destino opcional.
+- O extrato e o dashboard derivam saldos a partir de transações persistidas, considerando o impacto duplo de `TRANSFER`.
+
+Design implementado:
+- `TRANSFER` foi adicionado ao enum `TransactionType`.
+- `destinationAccountId` opcional foi adicionado em `Transaction`.
+- `accountId` representa a conta origem.
+- `destinationAccountId` representa a conta destino.
+- `amount` permanece sempre positivo.
+- `categoryId` não é exigido para transferências neste corte.
+
+Regras técnicas:
+- `destinationAccountId` é obrigatório quando `type = TRANSFER`.
+- `destinationAccountId` deve ser nulo quando `type = INCOME` ou `EXPENSE`.
+- Origem e destino devem pertencer ao mesmo `workspaceId`.
+- Origem e destino não podem ser a mesma conta.
+- Transferência deve ser bloqueada quando o saldo atual da origem for insuficiente.
+- Despesas comuns continuam podendo deixar saldo negativo.
+- Listagem, detalhe e dashboard devem considerar que `TRANSFER` tem impacto em duas contas.
+- Edição e remoção de transferência devem recalcular o impacto de origem e destino com segurança.
+
+Documentos relacionados:
+- `docs/features/account-transfers.md`
+- `docs/features/account-transfers-sprints.md`
+
+### Colaboração em Workspace e Convites
+O modelo de workspace foi desenhado para múltiplos usuários, e a API pública já possui o primeiro fluxo de convite, aceite e gestão de membros.
+
+Estado atual:
+- `WorkspaceMember` representa o vínculo usuário-workspace.
+- Roles existentes: `OWNER`, `ADMIN`, `EDITOR` e `VIEWER`.
+- `WorkspacesService` valida membership e permissão de escrita.
+- `GET /workspaces/:workspaceId/members` lista membros.
+- Entidades financeiras registram `createdByUserId` e `updatedByUserId`.
+
+Design implementado:
+- Model `WorkspaceInvitation` para convites.
+- Ciclo de vida com status `PENDING`, `ACCEPTED`, `DECLINED`, `CANCELED` e `EXPIRED`.
+- Armazenamento apenas do hash do token de convite, nunca o token em texto puro.
+- `OWNER` e `ADMIN` podem enviar convites.
+- Endpoints para listar, criar, aceitar, recusar e cancelar convites.
+- Endpoints para alterar role e remover membro.
+- Garantia de que o workspace mantenha pelo menos um `OWNER`.
+
+Evoluções pendentes:
+- Reenvio de convite.
+- Envio real do convite por email/notificação.
+
+Regras técnicas:
+- Todo endpoint administrativo de membro deve validar membership e role de gestão.
+- O aceite de convite deve criar `WorkspaceMember` em transação de banco.
+- Convites duplicados pendentes para o mesmo `workspaceId` e `email` devem ser bloqueados.
+- Usuários convidados com role de escrita podem lançar transações nas mesmas contas do workspace.
+- `VIEWER` permanece somente leitura.
+- Autoria de movimentações e alterações financeiras continua derivada do JWT.
+
+Documentos relacionados:
+- `docs/features/workspace-collaboration.md`
+- `docs/features/workspace-collaboration-sprints.md`
+
 ## Segurança
 - Proteção contra injeção e ataques comuns.
 - Utilização de Rate Limiting e cabeçalhos seguros (ex: Helmet).

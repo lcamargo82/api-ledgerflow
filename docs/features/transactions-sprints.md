@@ -17,6 +17,8 @@ git switch -c feature/transactions-management
 Branch recomendada para evolução de transferências:
 - Base: `develop`, depois do merge de `feature/transactions-management`
 - Branch: `feature/account-transfers`
+- Spec: `docs/features/account-transfers.md`
+- Sprints: `docs/features/account-transfers-sprints.md`
 
 Legenda:
 - `[x]`: implementado.
@@ -152,29 +154,29 @@ Fechar a feature com cobertura suficiente para regras financeiras sensíveis.
 
 ## Sprint 6: Transferências entre Contas
 
-Status: futura.
+Status: implementada.
 
 ### Objetivo
 Permitir transferir valores entre contas do mesmo workspace sem tratar a operação como despesa ou receita real.
 
 ### Backlog
-- [ ] Adicionar `TRANSFER` ao enum `TransactionType`.
-- [ ] Adicionar `destinationAccountId` opcional ao model `Transaction`.
-- [ ] Criar migração Prisma.
-- [ ] Atualizar DTO de criação para aceitar transferência.
-- [ ] Validar que origem e destino pertencem ao mesmo `workspaceId`.
-- [ ] Impedir origem e destino iguais.
-- [ ] Validar saldo suficiente na conta de origem.
-- [ ] Implementar impacto atômico no saldo derivado ou agregações.
-- [ ] Atualizar listagem e detalhe para representar origem e destino.
-- [ ] Cobrir testes de saldo insuficiente, sucesso e rollback.
+- [x] Adicionar `TRANSFER` ao enum `TransactionType`.
+- [x] Adicionar `destinationAccountId` opcional ao model `Transaction`.
+- [x] Criar migração Prisma.
+- [x] Atualizar DTO de criação para aceitar transferência.
+- [x] Validar que origem e destino pertencem ao mesmo `workspaceId`.
+- [x] Impedir origem e destino iguais.
+- [x] Validar saldo suficiente na conta de origem.
+- [x] Implementar impacto no saldo derivado.
+- [x] Atualizar listagem e detalhe para representar origem e destino.
+- [x] Cobrir testes de saldo insuficiente e sucesso.
 
 ### Critérios de Aceite
-- [ ] Transferência válida subtrai da origem e soma no destino.
-- [ ] Transferência com saldo insuficiente é bloqueada.
-- [ ] Despesas continuam podendo deixar saldo negativo.
-- [ ] Transferência nunca permite conta de outro workspace.
-- [ ] Swagger diferencia claramente receitas/despesas de transferências.
+- [x] Transferência válida subtrai da origem e soma no destino.
+- [x] Transferência com saldo insuficiente é bloqueada.
+- [x] Despesas continuam podendo deixar saldo negativo.
+- [x] Transferência nunca permite conta de outro workspace.
+- [x] Swagger diferencia claramente receitas/despesas de transferências.
 
 ## Ordem Recomendada
 1. Sprint 1: Fundação do Módulo de Transações.

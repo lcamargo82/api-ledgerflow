@@ -193,6 +193,10 @@ Campos recomendados nas entidades financeiras:
 
 Convites de novos membros não foram implementados neste corte. O schema já possui `WorkspaceMember` e `invitedByUserId`, deixando a base preparada para colaboração.
 
+Specs dedicadas para completar colaboração:
+- `docs/features/workspace-collaboration.md`
+- `docs/features/workspace-collaboration-sprints.md`
+
 ## Segurança
 - Nunca aceitar `userId` vindo do corpo para definir autoria. O usuário vem do JWT.
 - Todo endpoint que recebe `workspaceId` deve validar membership antes de acessar dados.

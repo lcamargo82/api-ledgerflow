@@ -3,7 +3,11 @@
 ## Visão Geral
 As **Movimentações** (`Transactions`) são os registros financeiros centrais do LedgerFlow. Elas representam eventos que alteram, explicam ou compõem o saldo das contas de um workspace.
 
-No estado atual da API, transações já existem para registrar o saldo inicial das contas por meio da transação gênesis. A próxima evolução é expor a gestão manual de receitas e despesas para o aplicativo mobile. Transferências entre contas devem entrar em uma sprint posterior, pois exigem alteração no modelo atual.
+No estado atual da API, transações registram saldo inicial das contas por meio da transação gênesis, receitas, despesas e transferências entre contas do mesmo workspace.
+
+Spec dedicada para a evolução:
+- `docs/features/account-transfers.md`
+- `docs/features/account-transfers-sprints.md`
 
 ## Status da Implementação
 Implementado para o MVP de receitas e despesas manuais na branch `codex-docs-categories-transactions-sprints`.
@@ -26,7 +30,6 @@ Implementado:
 - Testes unitários principais de `TransactionsService`.
 
 Pendente:
-- Transferências entre contas.
 - Status de agendamento ou conciliação, caso o produto precise de transações futuras.
 - Testes e2e específicos.
 - Soft-delete/estorno formal para auditoria avançada.
@@ -76,18 +79,18 @@ Campos existentes:
 - `MANUAL`: lançamento criado pelo usuário.
 - `INITIAL_BALANCE`: lançamento sistêmico criado junto da conta para representar saldo inicial.
 
-## Modelo de Dados Futuro para Transferências
-Transferências ainda não cabem no schema atual porque `TransactionType` não possui `TRANSFER` e `Transaction` não possui `destinationAccountId`.
+## Modelo de Dados para Transferências
+Transferências foram adicionadas ao schema com `TransactionType.TRANSFER` e `Transaction.destinationAccountId`.
 
-Campos e enum sugeridos para uma sprint posterior:
-- Adicionar `TRANSFER` ao enum `TransactionType`.
-- Adicionar `destinationAccountId` opcional em `Transaction`.
+Campos e enum implementados:
+- `TRANSFER` no enum `TransactionType`.
+- `destinationAccountId` opcional em `Transaction`.
 - Validar que `accountId` é conta de origem e `destinationAccountId` é conta de destino.
 - Garantir que ambas as contas pertencem ao mesmo `workspaceId`.
 
-Decisão recomendada para o MVP imediato:
-- Implementar primeiro receitas e despesas usando o schema atual.
-- Implementar transferências em sprint separada, com migração explícita e testes dedicados de saldo.
+Decisão implementada:
+- Receitas e despesas continuam usando `accountId` e categoria obrigatória.
+- Transferências usam `accountId` como origem, `destinationAccountId` como destino e categoria nula.
 
 ## Regras de Saldo
 O saldo de uma conta deve ser calculado a partir das transações vinculadas a ela.
@@ -111,7 +114,7 @@ O saldo de uma conta deve ser calculado a partir das transações vinculadas a e
 - Saldo inicial negativo gera `EXPENSE` com `amount` absoluto.
 - Não deve ser editado ou excluído pelos endpoints comuns de transação manual, salvo decisão explícita de produto.
 
-### Transferência (`TRANSFER`) - Futuro
+### Transferência (`TRANSFER`)
 - Conta origem: `accountId`.
 - Conta destino: `destinationAccountId`.
 - Deve ser proibido transferir valor maior que o saldo atual da origem.
@@ -169,7 +172,7 @@ Comportamento recomendado:
 }
 ```
 
-### Payload Futuro de Transferência
+### Payload de Transferência
 ```json
 {
   "accountId": "uuid-conta-origem",
