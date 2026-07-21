@@ -1,5 +1,6 @@
 import { randomBytes, createHash } from 'crypto';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   CategoryType,
   Prisma,
@@ -10,6 +11,7 @@ import {
   type WorkspaceMember,
 } from '@prisma/client';
 import { PrismaService } from '../../database/prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import {
   CreateOnboardingWorkspacesDto,
   type OnboardingWorkspaceChoice,
@@ -32,7 +34,13 @@ type WorkspaceWithMembership = Workspace & {
 
 @Injectable()
 export class WorkspacesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(WorkspacesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+    private readonly config: ConfigService,
+  ) {}
 
   async listForUser(userId: string) {
     return this.prisma.workspace.findMany({
@@ -239,6 +247,8 @@ export class WorkspacesService {
         createdAt: true,
       },
     });
+
+    await this.sendWorkspaceInvitationEmail(email, token, invitation);
 
     return {
       ...invitation,
@@ -568,6 +578,46 @@ export class WorkspacesService {
     expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRATION_DAYS);
 
     return expiresAt;
+  }
+
+  private async sendWorkspaceInvitationEmail(
+    email: string,
+    token: string,
+    invitation: {
+      role: WorkspaceRole;
+      expiresAt: Date;
+    },
+  ) {
+    const appUrl = this.config.get<string>('APP_WEB_URL', 'https://app.ledgerflow.local');
+    const acceptUrl = `${appUrl}/workspace-invitations/accept?token=${token}`;
+
+    try {
+      await this.emailService.send({
+        to: email,
+        subject: 'Convite para workspace no LedgerFlow',
+        text: [
+          'Voce recebeu um convite para acessar um workspace no LedgerFlow.',
+          `Role: ${invitation.role}`,
+          `Aceite pelo link: ${acceptUrl}`,
+          `Ou use este token no app: ${token}`,
+          `O convite expira em: ${invitation.expiresAt.toISOString()}`,
+        ].join('\n'),
+        html: `
+          <p>Voce recebeu um convite para acessar um workspace no LedgerFlow.</p>
+          <p><strong>Role:</strong> ${invitation.role}</p>
+          <p><a href="${acceptUrl}">Aceitar convite</a></p>
+          <p>Se o link nao abrir no app, use este token:</p>
+          <pre>${token}</pre>
+          <p>O convite expira em ${invitation.expiresAt.toISOString()}.</p>
+        `,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Workspace invitation email could not be sent to ${email}: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+    }
   }
 
   private resolveWorkspaceTypes(choice: OnboardingWorkspaceChoice) {

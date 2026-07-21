@@ -77,12 +77,13 @@ Design implementado:
 - Armazenamento apenas do hash do token de convite, nunca o token em texto puro.
 - `OWNER` e `ADMIN` podem enviar convites.
 - Endpoints para listar, criar, aceitar, recusar e cancelar convites.
+- Envio de convite por email via `EmailService`/SMTP. Em ambiente local, o `docker-compose.yml` usa Mailpit.
 - Endpoints para alterar role e remover membro.
 - Garantia de que o workspace mantenha pelo menos um `OWNER`.
 
 Evoluções pendentes:
 - Reenvio de convite.
-- Envio real do convite por email/notificação.
+- Tela/fluxo no app para abrir o link do convite e chamar a API de aceite.
 
 Regras técnicas:
 - Todo endpoint administrativo de membro deve validar membership e role de gestão.

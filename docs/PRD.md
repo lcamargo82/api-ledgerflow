@@ -23,8 +23,8 @@ O LedgerFlow é um aplicativo mobile Android voltado para o controle e gestão f
 - Categorias: implementadas no MVP com seed de onboarding, campos visuais, listagem, detalhe, criação, edição e remoção/arquivamento por workspace.
 - Movimentações: implementadas no MVP para receitas e despesas manuais, com extrato paginado, filtros, detalhe, edição e remoção protegendo transações sistêmicas de saldo inicial.
 - Transferências entre contas: implementadas na API com `TransactionType.TRANSFER`, `destinationAccountId`, validação de saldo suficiente, extrato e saldos derivados considerando origem e destino.
-- Colaboração no mesmo workspace: implementada na API para convites, aceite/recusa, cancelamento, listagem de membros, alteração de role e remoção protegendo o último `OWNER`; ainda faltam tela no app, envio real de email e seletor/gestão de workspace mais completa.
-- Gestão Financeira completa: parcialmente preparada. Relatórios avançados, recorrências, envio de convites por email e fluxos completos no app ainda não foram implementados.
+- Colaboração no mesmo workspace: implementada na API para convites com envio por email/SMTP, aceite/recusa, cancelamento, listagem de membros, alteração de role e remoção protegendo o último `OWNER`; ainda faltam tela no app, reenvio de convite e seletor/gestão de workspace mais completa.
+- Gestão Financeira completa: parcialmente preparada. Relatórios avançados, recorrências e fluxos completos no app ainda não foram implementados.
 
 ## Injeção de Escopo Futuro
 
