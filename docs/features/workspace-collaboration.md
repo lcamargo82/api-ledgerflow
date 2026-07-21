@@ -3,7 +3,7 @@
 ## Visao Geral
 Colaboracao em workspace permite que duas ou mais pessoas usem o mesmo ambiente financeiro com logins separados, papeis diferentes e autoria preservada. Exemplos: casal controlando despesas da casa, familia compartilhando orcamento, socios lancando movimentacoes de uma empresa.
 
-O modelo atual ja suporta colaboracao de forma parcial, mas o fluxo ainda nao esta utilizavel pelo app porque falta um endpoint publico para convidar ou adicionar outro usuario ao workspace e falta a tela de gestao de membros/convites.
+O modelo atual ja suporta colaboracao, e a API publica ja possui fluxo de convite por email/token. A experiencia completa ainda depende da tela de gestao de membros/convites no app.
 
 ## Status da Implementacao
 Status: implementada na API, parcialmente pendente no app.
@@ -18,6 +18,7 @@ Ja existe:
 
 Implementado:
 - Endpoint e fluxo de convite por token.
+- Envio de convite por email via SMTP/Mailpit em ambiente local.
 - Persistencia de convite com status, expiracao e aceite.
 - Endpoints para aceitar, recusar e cancelar convite.
 - Endpoints para alterar role e remover membro.
@@ -25,7 +26,6 @@ Implementado:
 
 Falta:
 - Reenvio de convite.
-- Envio real do convite por email.
 - Tela no app para gerenciar membros e convites.
 - Seletor e gestao de workspace mais completos no app.
 
@@ -117,10 +117,22 @@ Resposta:
 }
 ```
 
+Fluxo do link de convite:
+1. `OWNER` ou `ADMIN` chama `POST /workspaces/:workspaceId/invitations`.
+2. A API cria o convite, armazena apenas `tokenHash` e envia email para o convidado.
+3. O email contem um link no formato `{APP_WEB_URL}/workspace-invitations/accept?token={token}` e tambem o token em texto para fallback.
+4. O app/web abre esse link, exige login/cadastro do convidado quando necessario e chama `POST /workspace-invitations/accept` com o token.
+5. A API valida token, status, expiracao e email do usuario autenticado. Se tudo estiver correto, cria `WorkspaceMember` e marca o convite como `ACCEPTED`.
+6. Para recusar, o app chama `POST /workspace-invitations/decline` com o mesmo token.
+
+Em desenvolvimento local, o email aparece no Mailpit:
+- SMTP interno: `mailpit:1025`.
+- UI local: `http://localhost:8027`.
+
 ## Regras de Negocio
 - Todo endpoint com `workspaceId` valida membership.
 - Apenas roles autorizadas podem convidar, cancelar convite, alterar role ou remover membro.
-- Convite deve ser enviado por email ou ficar disponivel para integracao futura com notificacao.
+- Convite deve ser enviado por email usando o `EmailService`.
 - O token de convite nao deve ser armazenado em texto puro.
 - Aceite deve validar email do usuario autenticado ou exigir cadastro/login antes de concluir.
 - Membro aceito passa a operar contas, categorias e transacoes conforme role.

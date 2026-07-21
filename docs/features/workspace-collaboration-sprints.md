@@ -52,6 +52,7 @@ Permitir que `OWNER` ou `ADMIN`, conforme decisao de produto, convide outro usua
 - [x] Definir expiracao padrao do convite.
 - [x] Armazenar apenas hash do token de aceite.
 - [x] Documentar no Swagger.
+- [x] Enviar email do convite via SMTP/Mailpit.
 
 ### Criterios de Aceite
 - [x] Role autorizada cria convite.
@@ -61,7 +62,7 @@ Permitir que `OWNER` ou `ADMIN`, conforme decisao de produto, convide outro usua
 
 ## Sprint 3: Aceite, Recusa, Cancelamento e Reenvio
 
-Status: parcialmente implementada. Aceite, recusa e cancelamento foram implementados; reenvio e envio real por email permanecem pendentes.
+Status: parcialmente implementada. Aceite, recusa, cancelamento e envio por email foram implementados; reenvio permanece pendente.
 
 ### Objetivo
 Completar o ciclo de vida de convites.
@@ -106,7 +107,7 @@ Permitir que gestores alterem roles e removam membros sem quebrar as garantias d
 
 ## Sprint 5: Integracao com App e Experiencia de Workspace
 
-Status: futura no app. A API ja retorna dados suficientes para iniciar a integracao.
+Status: futura no app. A API ja envia email com link/token e retorna dados suficientes para iniciar a integracao.
 
 ### Objetivo
 Fornecer contrato suficiente para o app gerenciar colaboracao e alternancia de workspace.

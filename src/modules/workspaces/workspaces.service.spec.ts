@@ -4,6 +4,7 @@ import {
   WorkspaceRole,
   WorkspaceType,
 } from '@prisma/client';
+import type { EmailService } from '../email/email.service';
 import { WorkspacesService } from './workspaces.service';
 
 type WorkspaceCreatePayload = {
@@ -116,6 +117,10 @@ describe('WorkspacesService', () => {
       update: jest.Mock;
     };
   };
+  let emailService: jest.Mocked<Pick<EmailService, 'send'>>;
+  let config: {
+    get: jest.Mock;
+  };
   let service: WorkspacesService;
 
   beforeEach(() => {
@@ -193,7 +198,13 @@ describe('WorkspacesService', () => {
         }),
       },
     };
-    service = new WorkspacesService(prisma as never);
+    emailService = {
+      send: jest.fn().mockResolvedValue({ messageId: 'message-1' }),
+    };
+    config = {
+      get: jest.fn((_key: string, defaultValue?: string) => defaultValue),
+    };
+    service = new WorkspacesService(prisma as never, emailService as never, config as never);
   });
 
   it('creates personal and business workspaces with owner membership and seeded categories', async () => {
@@ -301,6 +312,33 @@ describe('WorkspacesService', () => {
       },
     });
     expect(invitationCreatePayload.data.tokenHash).not.toBe(result.acceptToken);
+    expect(emailService.send.mock.calls).toHaveLength(1);
+    expect(emailService.send.mock.calls[0][0]).toMatchObject({
+      to: 'pessoa@example.com',
+      subject: 'Convite para workspace no LedgerFlow',
+    });
+    expect(emailService.send.mock.calls[0][0].text).toContain(result.acceptToken);
+    expect(emailService.send.mock.calls[0][0].text).toContain(
+      '/workspace-invitations/accept?token=',
+    );
+  });
+
+  it('keeps the invitation when the email cannot be sent', async () => {
+    prisma.workspaceMember.findFirst.mockResolvedValueOnce({ role: WorkspaceRole.OWNER });
+    prisma.workspaceMember.findFirst.mockResolvedValueOnce(null);
+    emailService.send.mockRejectedValue(new Error('SMTP unavailable'));
+
+    await expect(
+      service.createInvitation('user-1', 'workspace-1', {
+        email: 'pessoa@example.com',
+        role: WorkspaceRole.EDITOR,
+      }),
+    ).resolves.toMatchObject({
+      id: 'invitation-1',
+      email: 'pessoa@example.com',
+      role: WorkspaceRole.EDITOR,
+    });
+    expect(prisma.workspaceInvitation.create.mock.calls).toHaveLength(1);
   });
 
   it('accepts an invitation and creates workspace membership', async () => {
